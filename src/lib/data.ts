@@ -5,6 +5,7 @@ import type {
   Market,
   SeasonItem,
   Vendor,
+  VendorOffering,
   VendorProduct,
 } from '@/lib/types';
 
@@ -49,6 +50,48 @@ export async function fetchSeasonality(): Promise<SeasonItem[]> {
   if (!isSupabaseConfigured) return [];
   const { data } = await supabase.from('seasonality').select('*').order('sort');
   return (data as SeasonItem[]) ?? [];
+}
+
+// ─── Weekly offerings on the public side (auto-rotates by date) ──────
+export async function fetchVendorOfferings(vendorId: string): Promise<VendorOffering[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data } = await supabase
+    .from('vendor_offerings')
+    .select('*')
+    .eq('vendor_id', vendorId)
+    .order('week_of', { ascending: false });
+  return (data as VendorOffering[]) ?? [];
+}
+
+/** Latest offering per vendor with week_of on/before the reference date. */
+export async function fetchCurrentOfferings(referenceISO: string): Promise<VendorOffering[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data } = await supabase
+    .from('vendor_offerings')
+    .select('*')
+    .lte('week_of', referenceISO)
+    .order('week_of', { ascending: false });
+  const seen = new Set<string>();
+  const out: VendorOffering[] = [];
+  for (const o of (data as VendorOffering[]) ?? []) {
+    if (!seen.has(o.vendor_id)) {
+      seen.add(o.vendor_id);
+      out.push(o);
+    }
+  }
+  return out;
+}
+
+/** The offering a shopper should see "now": newest one dated on/before reference. */
+export function pickCurrentOffering(
+  offerings: VendorOffering[],
+  referenceISO: string,
+): VendorOffering | null {
+  return (
+    offerings
+      .filter((o) => o.week_of <= referenceISO)
+      .sort((a, b) => b.week_of.localeCompare(a.week_of))[0] ?? null
+  );
 }
 
 /** Active announcements for the given audiences (public site passes public+all). */

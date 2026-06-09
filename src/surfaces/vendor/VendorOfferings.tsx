@@ -7,6 +7,7 @@ import {
   updateOffering,
   type OfferingInput,
 } from '@/lib/vendorData';
+import { pickCurrentOffering } from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
 import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
 import { formatDate, thisSaturdayISO } from '@/lib/format';
@@ -21,6 +22,7 @@ const SAMPLE: string[][] = [
 
 export function VendorOfferings({ vendor }: { vendor: Vendor }) {
   const { data: offerings, loading, reload } = useAsync(() => fetchOfferings(vendor.id), [vendor.id], []);
+  const currentId = pickCurrentOffering(offerings, thisSaturdayISO())?.id;
   const [weekOf, setWeekOf] = useState(thisSaturdayISO());
   const [headline, setHeadline] = useState('');
   const [items, setItems] = useState('');
@@ -156,7 +158,11 @@ export function VendorOfferings({ vendor }: { vendor: Vendor }) {
       </div>
 
       <div>
-        <h3 className="text-lg">Recent posts</h3>
+        <h3 className="text-lg">Your posts</h3>
+        <p className="mt-1 text-sm text-brand-muted">
+          Shoppers automatically see the post for the current week — load the whole season and it
+          rotates on its own, no weekly upkeep.
+        </p>
         {loading ? (
           <div className="mt-3 h-24 animate-pulse rounded-2xl bg-brand-card" />
         ) : offerings.length === 0 ? (
@@ -164,7 +170,7 @@ export function VendorOfferings({ vendor }: { vendor: Vendor }) {
         ) : (
           <div className="mt-3 space-y-3">
             {offerings.map((o) => (
-              <OfferingRow key={o.id} offering={o} onChanged={reload} />
+              <OfferingRow key={o.id} offering={o} onChanged={reload} isCurrent={o.id === currentId} />
             ))}
           </div>
         )}
@@ -173,7 +179,15 @@ export function VendorOfferings({ vendor }: { vendor: Vendor }) {
   );
 }
 
-function OfferingRow({ offering, onChanged }: { offering: VendorOffering; onChanged: () => void }) {
+function OfferingRow({
+  offering,
+  onChanged,
+  isCurrent,
+}: {
+  offering: VendorOffering;
+  onChanged: () => void;
+  isCurrent: boolean;
+}) {
   const [editing, setEditing] = useState(false);
   const [weekOf, setWeekOf] = useState(offering.week_of);
   const [headline, setHeadline] = useState(offering.headline ?? '');
@@ -240,9 +254,16 @@ function OfferingRow({ offering, onChanged }: { offering: VendorOffering; onChan
   }
 
   return (
-    <div className="card p-4">
+    <div className={`card p-4 ${isCurrent ? 'ring-1 ring-brand-accent' : ''}`}>
       <div className="flex items-center justify-between gap-2">
-        <p className="font-semibold text-brand-primary-dark">{offering.headline ?? 'This week'}</p>
+        <p className="font-semibold text-brand-primary-dark">
+          {offering.headline ?? 'This week'}
+          {isCurrent && (
+            <span className="ml-2 rounded-full bg-brand-accent/20 px-2 py-0.5 text-[11px] font-semibold text-brand-primary-dark">
+              ✓ Showing now
+            </span>
+          )}
+        </p>
         <div className="flex items-center gap-3">
           <span className="text-xs text-brand-muted">Week of {formatDate(offering.week_of)}</span>
           <button onClick={() => setEditing(true)} className="text-xs font-semibold text-brand-primary hover:underline">Edit</button>

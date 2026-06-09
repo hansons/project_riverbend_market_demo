@@ -1,7 +1,7 @@
-import { fetchVendorBySlug, fetchVendorProducts } from '@/lib/data';
+import { fetchVendorBySlug, fetchVendorProducts, fetchVendorOfferings, pickCurrentOffering } from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
 import { navigate } from '@/lib/router';
-import { categoryEmoji, formatPrice } from '@/lib/format';
+import { categoryEmoji, formatDate, formatPrice, thisSaturdayISO } from '@/lib/format';
 import { VendorImage } from './VendorImage';
 import type { Vendor } from '@/lib/types';
 
@@ -16,6 +16,12 @@ export function VendorDetail({ slug }: { slug: string }) {
     [vendor?.id],
     [],
   );
+  const { data: offerings } = useAsync(
+    () => (vendor ? fetchVendorOfferings(vendor.id) : Promise.resolve([])),
+    [vendor?.id],
+    [],
+  );
+  const current = pickCurrentOffering(offerings, thisSaturdayISO());
 
   if (loading) {
     return <div className="mx-auto max-w-content px-4 py-12">
@@ -79,6 +85,24 @@ export function VendorDetail({ slug }: { slug: string }) {
 
         {/* Right: visit + what they bring */}
         <div className="space-y-5">
+          {current && (
+            <div className="card border-brand-accent p-5">
+              <p className="eyebrow">Fresh this Saturday</p>
+              <p className="mt-1 font-semibold text-brand-primary-dark">
+                {current.headline ?? 'Bringing this week'}
+              </p>
+              {current.items.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {current.items.map((it) => (
+                    <span key={it} className="chip">{it}</span>
+                  ))}
+                </div>
+              )}
+              {current.note && <p className="mt-2 text-sm text-brand-muted">{current.note}</p>}
+              <p className="mt-2 text-[11px] text-brand-muted">Updated for the week of {formatDate(current.week_of)}</p>
+            </div>
+          )}
+
           <div className="card p-5">
             <p className="field-label">Find them at</p>
             <div className="mt-2 space-y-1 text-sm">

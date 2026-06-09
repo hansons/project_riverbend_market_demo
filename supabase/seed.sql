@@ -442,4 +442,21 @@ insert into announcements (title, body, audience, active) values
   ('🎶 Live music this Saturday', 'The Cedar Sisters play the main stage 10am–noon. Come early for the best produce.', 'public', true),
   ('Load-in moves to 7:30am', 'Starting June 20, vendor load-in opens at 7:30am. Shopper gates still open at 9.', 'vendors', true);
 
+-- Current-week offerings across several vendors so the public "Fresh this
+-- Saturday" feed is populated. Dated to the Jun 13 market; the site auto-selects
+-- the post for the current week, so these rotate in/out on their own.
+insert into vendor_offerings (vendor_id, week_of, headline, items, note) values
+  ('a0000000-0000-4000-8000-000000000001', '2026-06-13', 'Strawberries are peaking',
+   '{"Strawberries","Sugar snap peas","Garlic scapes","Rainbow chard"}', null),
+  ('a0000000-0000-4000-8000-000000000002', '2026-06-13', 'Fresh sourdough & morning buns',
+   '{"Country sourdough","Morning buns","Seeded rye"}', 'Get there early.'),
+  ('a0000000-0000-4000-8000-000000000006', '2026-06-13', 'Lion''s mane is back',
+   '{"Lion''s mane","Blue oyster","Shiitake"}', null),
+  ('a0000000-0000-4000-8000-000000000013', '2026-06-13', 'First berries of the season',
+   '{"Strawberries","Blueberries"}', 'U-pick open weekends.'),
+  ('a0000000-0000-4000-8000-000000000015', '2026-06-13', 'New spring wildflower honey',
+   '{"Wildflower honey","Honeycomb","Blackberry jam"}', null),
+  ('a0000000-0000-4000-8000-000000000009', '2026-06-13', 'Greens & spring onions',
+   '{"Salad mix","Spring onions","Heirloom carrots","Lacinato kale"}', null);
+
 commit;

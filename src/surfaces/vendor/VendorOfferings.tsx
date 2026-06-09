@@ -8,8 +8,8 @@ import type { Vendor } from '@/lib/types';
 const HEADER = ['week_of', 'headline', 'items', 'note'];
 const SAMPLE: string[][] = [
   HEADER,
-  ['2026-06-13', "This week's pick", 'Strawberries; Snap peas; Lettuce', 'Get there early'],
-  ['2026-06-20', 'Tomatoes are in', 'Heirloom tomatoes; Basil; Garlic', ''],
+  ['2026-06-13', "This week's pick", 'Strawberries, Snap peas, Lettuce', 'Get there early'],
+  ['2026-06-20', 'Tomatoes are in', 'Heirloom tomatoes, Basil, Garlic', ''],
 ];
 
 export function VendorOfferings({ vendor }: { vendor: Vendor }) {
@@ -46,7 +46,7 @@ export function VendorOfferings({ vendor }: { vendor: Vendor }) {
   function exportCurrent() {
     const rows = [
       HEADER,
-      ...offerings.map((o) => [o.week_of, o.headline ?? '', o.items.join('; '), o.note ?? '']),
+      ...offerings.map((o) => [o.week_of, o.headline ?? '', o.items.join(', '), o.note ?? '']),
     ];
     downloadCSV(`${vendor.slug}-offerings.csv`, toCSV(rows));
   }
@@ -61,7 +61,7 @@ export function VendorOfferings({ vendor }: { vendor: Vendor }) {
       .map((o) => ({
         week_of: o.week_of.trim(),
         headline: o.headline?.trim() || null,
-        items: (o.items ?? '').split(';').map((i) => i.trim()).filter(Boolean),
+        items: (o.items ?? '').split(',').map((i) => i.trim()).filter(Boolean),
         note: o.note?.trim() || null,
       }));
     if (!parsed.length) {
@@ -119,8 +119,9 @@ export function VendorOfferings({ vendor }: { vendor: Vendor }) {
       <div className="card p-6">
         <h3 className="text-lg">Bulk import / export</h3>
         <p className="mt-1 text-sm text-brand-muted">
-          Plan several weeks in a spreadsheet, then import them. (Items in a cell are separated by
-          <code className="mx-1 rounded bg-brand-paper px-1">;</code>.) Imported posts are <strong>added</strong>.
+          Plan several weeks in a spreadsheet, then import them. (Put all items in the one
+          <code className="mx-1 rounded bg-brand-paper px-1">items</code> column, comma-separated.)
+          Imported posts are <strong>added</strong>.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button className="btn-outline" onClick={() => downloadCSV('offerings-sample.csv', toCSV(SAMPLE))}>⬇ Sample CSV</button>

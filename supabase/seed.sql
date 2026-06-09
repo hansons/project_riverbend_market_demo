@@ -4,6 +4,9 @@
 -- Idempotent / re-runnable: it clears the domain rows and upserts vendors by id,
 -- so re-running won't duplicate anything and the demo-vendor link (vendor id
 -- ...0001 = Fern Hollow) is preserved. Safe to run again after editing.
+--
+-- Regional (Willamette Valley) flavor is intentional, but the market's meeting
+-- venues are fictional so the demo doesn't pinpoint any real market location.
 
 begin;
 
@@ -29,13 +32,14 @@ insert into tenants (id, slug, name, tagline, region, is_active, brand) values
 on conflict (id) do nothing;
 
 -- ─── Markets ─────────────────────────────────────────────────────────
+-- Venue names/cross-streets are fictional on purpose.
 insert into markets (name, day_of_week, season, hours, location, blurb, sort) values
   ('Saturday Market', 'Saturday', 'April – November', '9am – 1pm',
-   'Riverfront Commons, 1st & Jackson', 'Our flagship market — 60+ vendors, live music, and the full harvest.', 1),
+   'Willow Bend Park, riverside lawn', 'Our flagship market — 60+ vendors, live music, and the full harvest.', 1),
   ('Midweek Market', 'Wednesday', 'June – September', '3pm – 7pm',
-   'Library Plaza, 6th & Monroe', 'A smaller after-work market for fresh dinner picks.', 2),
+   'Maple Square, downtown', 'A smaller after-work market for fresh dinner picks.', 2),
   ('Winter Market', 'Saturday', 'December – March (2nd & 4th Sat)', '10am – 2pm',
-   'Grange Hall, 4th & Adams', 'Indoor cool-season produce, baked goods, and crafts.', 3);
+   'The Grange Hall, Orchard Avenue', 'Indoor cool-season produce, baked goods, and crafts.', 3);
 
 -- ─── Vendors ─────────────────────────────────────────────────────────
 -- 20 active (shown to shoppers) + 2 pending + 1 suspended (admin-only; the

@@ -1,0 +1,75 @@
+import { useHashRoute } from '@/lib/router';
+import { useTheme } from '@/theme/ThemeProvider';
+import { PublicHome } from './PublicHome';
+import { VendorBrowse } from './VendorBrowse';
+import { VendorDetail } from './VendorDetail';
+import { MarketInfo } from './MarketInfo';
+
+const NAV = [
+  { to: '/', label: 'Home' },
+  { to: '/vendors', label: 'Vendors' },
+  { to: '/markets', label: 'Visit' },
+];
+
+export function PublicShell() {
+  const [path, go] = useHashRoute();
+  const { tenant } = useTheme();
+
+  const vendorMatch = path.match(/^\/vendor\/([^/]+)$/);
+
+  let view = <PublicHome />;
+  if (vendorMatch) view = <VendorDetail slug={decodeURIComponent(vendorMatch[1])} />;
+  else if (path.startsWith('/vendors')) view = <VendorBrowse />;
+  else if (path.startsWith('/markets')) view = <MarketInfo />;
+
+  const isActive = (to: string) =>
+    to === '/' ? path === '/' : path.startsWith(to) || (to === '/vendors' && path.startsWith('/vendor/'));
+
+  return (
+    <div>
+      <nav className="border-b border-brand-line bg-brand-card/80 backdrop-blur">
+        <div className="mx-auto flex max-w-content items-center justify-between px-4 py-3">
+          <button onClick={() => go('/')} className="text-left">
+            <span className="block font-serif text-lg font-semibold leading-none text-brand-primary-dark">
+              {tenant.name}
+            </span>
+            {tenant.tagline && (
+              <span className="block text-xs text-brand-muted">{tenant.tagline}</span>
+            )}
+          </button>
+          <div className="flex items-center gap-1">
+            {NAV.map((n) => (
+              <button
+                key={n.to}
+                onClick={() => go(n.to)}
+                className={[
+                  'rounded-full px-3 py-1.5 text-sm font-medium transition',
+                  isActive(n.to)
+                    ? 'bg-brand-primary/10 text-brand-primary-dark'
+                    : 'text-brand-ink/70 hover:bg-brand-primary/5',
+                ].join(' ')}
+              >
+                {n.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {view}
+
+      <footer className="mt-16 border-t border-brand-line bg-brand-card">
+        <div className="mx-auto flex max-w-content flex-col gap-2 px-4 py-8 text-sm text-brand-muted sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            {tenant.name}
+            {tenant.region ? ` · ${tenant.region}` : ''}
+          </span>
+          <span className="text-xs">
+            A fictional market built as a live demo by{' '}
+            <span className="font-semibold text-brand-primary-dark">Lodestone Consulting</span>.
+          </span>
+        </div>
+      </footer>
+    </div>
+  );
+}

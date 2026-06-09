@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Default brand = Riverbend. ThemeProvider overwrites these from the active
+   tenant row at runtime; keeping them here means the app looks right instantly
+   (even before Supabase is connected) and the Slice 4 re-skin is a var swap. */
+:root {
+  --brand-primary: 47 93 58;
+  --brand-primary-dark: 36 74 46;
+  --brand-accent: 224 165 38;
+  --brand-berry: 181 83 42;
+  --brand-ink: 42 38 32;
+  --brand-paper: 251 247 239;
+  --brand-card: 255 255 255;
+  --brand-muted: 107 99 84;
+  --brand-line: 231 222 201;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-brand-paper font-sans text-brand-ink antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-serif text-brand-primary-dark;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-accent ring-offset-2 ring-offset-brand-paper;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-primary-dark disabled:opacity-50;
+  }
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-accent px-4 py-2 text-sm font-semibold text-brand-ink transition hover:brightness-95 disabled:opacity-50;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-brand-line bg-brand-card px-4 py-2 text-sm font-semibold text-brand-ink transition hover:bg-brand-paper disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-brand-ink/80 transition hover:bg-brand-primary/10;
+  }
+  .card {
+    @apply rounded-2xl border border-brand-line bg-brand-card shadow-card;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-brand-line bg-brand-paper px-2.5 py-0.5 text-xs font-medium text-brand-muted;
+  }
+  .field-label {
+    @apply block text-xs font-semibold uppercase tracking-wide text-brand-muted;
+  }
+  .field-input {
+    @apply mt-1 block w-full rounded-lg border border-brand-line bg-brand-card px-3 py-2 text-sm text-brand-ink shadow-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-brand-accent;
+  }
+}

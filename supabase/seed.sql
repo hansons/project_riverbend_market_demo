@@ -12,8 +12,13 @@ begin;
 
 -- Clear domain rows (children first). Vendors are UPSERTED below rather than
 -- deleted, so profiles.vendor_id links survive a re-seed.
+delete from messages;
+delete from fees;
+delete from vendor_schedule;
+delete from vendor_offerings;
 delete from vendor_products;
 delete from seasonality;
+delete from market_dates;
 delete from markets;
 
 -- ─── Tenants ─────────────────────────────────────────────────────────
@@ -33,12 +38,12 @@ on conflict (id) do nothing;
 
 -- ─── Markets ─────────────────────────────────────────────────────────
 -- Venue names/cross-streets are fictional on purpose.
-insert into markets (name, day_of_week, season, hours, location, blurb, sort) values
-  ('Saturday Market', 'Saturday', 'April – November', '9am – 1pm',
+insert into markets (id, name, day_of_week, season, hours, location, blurb, sort) values
+  ('22220000-0000-4000-8000-000000000001', 'Saturday Market', 'Saturday', 'April – November', '9am – 1pm',
    'Willow Bend Park, riverside lawn', 'Our flagship market — 60+ vendors, live music, and the full harvest.', 1),
-  ('Midweek Market', 'Wednesday', 'June – September', '3pm – 7pm',
+  ('22220000-0000-4000-8000-000000000002', 'Midweek Market', 'Wednesday', 'June – September', '3pm – 7pm',
    'Maple Square, downtown', 'A smaller after-work market for fresh dinner picks.', 2),
-  ('Winter Market', 'Saturday', 'December – March (2nd & 4th Sat)', '10am – 2pm',
+  ('22220000-0000-4000-8000-000000000003', 'Winter Market', 'Saturday', 'December – March (2nd & 4th Sat)', '10am – 2pm',
    'The Grange Hall, Orchard Avenue', 'Indoor cool-season produce, baked goods, and crafts.', 3);
 
 -- ─── Vendors ─────────────────────────────────────────────────────────
@@ -354,5 +359,50 @@ insert into seasonality (item, category, emoji, status, months, note, sort) valu
   ('Dahlias',         'Flowers',   '🌼', 'coming', '{7,8,9}',                        null, 23),
   ('Hazelnuts',       'Nuts',      '🌰', 'coming', '{10}',                           'Fall harvest', 24),
   ('Honey',           'Pantry',    '🍯', 'peak',   '{1,2,3,4,5,6,7,8,9,10,11,12}',   'Spring wildflower', 25);
+
+-- ─── Vendor portal data (Slice 2) — all for Fern Hollow, the demo vendor ──
+
+-- Upcoming market dates (Saturdays on market 01, Wednesdays on market 02).
+insert into market_dates (id, market_id, date, label, sort) values
+  ('33330000-0000-4000-8000-000000000001', '22220000-0000-4000-8000-000000000001', '2026-06-13', null, 1),
+  ('33330000-0000-4000-8000-000000000002', '22220000-0000-4000-8000-000000000001', '2026-06-20', null, 2),
+  ('33330000-0000-4000-8000-000000000003', '22220000-0000-4000-8000-000000000001', '2026-06-27', null, 3),
+  ('33330000-0000-4000-8000-000000000004', '22220000-0000-4000-8000-000000000001', '2026-07-04', 'Independence Day market', 4),
+  ('33330000-0000-4000-8000-000000000005', '22220000-0000-4000-8000-000000000001', '2026-07-11', null, 5),
+  ('33330000-0000-4000-8000-000000000006', '22220000-0000-4000-8000-000000000002', '2026-06-17', null, 6),
+  ('33330000-0000-4000-8000-000000000007', '22220000-0000-4000-8000-000000000002', '2026-06-24', null, 7),
+  ('33330000-0000-4000-8000-000000000008', '22220000-0000-4000-8000-000000000002', '2026-07-01', null, 8),
+  ('33330000-0000-4000-8000-000000000009', '22220000-0000-4000-8000-000000000002', '2026-07-08', null, 9);
+
+-- Fern Hollow's confirmations / declines (some dates left open for the demo).
+insert into vendor_schedule (vendor_id, market_date_id, status, stall, note) values
+  ('a0000000-0000-4000-8000-000000000001', '33330000-0000-4000-8000-000000000001', 'confirmed', 'B12', null),
+  ('a0000000-0000-4000-8000-000000000001', '33330000-0000-4000-8000-000000000002', 'confirmed', 'B12', null),
+  ('a0000000-0000-4000-8000-000000000001', '33330000-0000-4000-8000-000000000003', 'declined',  null,  'Out of town that weekend'),
+  ('a0000000-0000-4000-8000-000000000001', '33330000-0000-4000-8000-000000000006', 'confirmed', 'W4',  null),
+  ('a0000000-0000-4000-8000-000000000001', '33330000-0000-4000-8000-000000000007', 'confirmed', 'W4',  null);
+
+-- Fern Hollow's recent weekly "what I have" posts.
+insert into vendor_offerings (vendor_id, week_of, headline, items, note) values
+  ('a0000000-0000-4000-8000-000000000001', '2026-06-06', 'Peak strawberry week',
+   '{"Strawberries","Sugar snap peas","Butterhead lettuce","Rainbow chard"}',
+   'Bringing extra strawberry flats — get there early.'),
+  ('a0000000-0000-4000-8000-000000000001', '2026-05-30', 'First snap peas of the year',
+   '{"Sugar snap peas","French breakfast radishes","Salad mix","Garlic scapes"}', null);
+
+-- Fern Hollow's stall fees.
+insert into fees (vendor_id, period, description, amount_cents, status, due_date) values
+  ('a0000000-0000-4000-8000-000000000001', 'June 2026',   'Stall fees — Saturday + Wednesday', 9000, 'due',  '2026-06-30'),
+  ('a0000000-0000-4000-8000-000000000001', 'May 2026',    'Stall fees — Saturday + Wednesday', 9000, 'paid', '2026-05-31'),
+  ('a0000000-0000-4000-8000-000000000001', 'Spring 2026', 'Annual vendor membership',          5000, 'paid', '2026-04-15');
+
+-- The vendor ↔ market-staff message thread for Fern Hollow.
+insert into messages (vendor_id, sender, author_name, body, created_at) values
+  ('a0000000-0000-4000-8000-000000000001', 'admin',  'Dana — Market Manager',
+   'Welcome back for the season! Your Saturday stall is B12. Let us know if you need power access.', '2026-06-01 09:12-07'),
+  ('a0000000-0000-4000-8000-000000000001', 'vendor', 'Fern Hollow Farm',
+   'Thanks Dana! B12 is perfect. We will need power for the produce cooler this year.', '2026-06-01 14:40-07'),
+  ('a0000000-0000-4000-8000-000000000001', 'admin',  'Dana — Market Manager',
+   'Power is all set for B12. See you Saturday!', '2026-06-02 08:05-07');
 
 commit;

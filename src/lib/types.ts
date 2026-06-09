@@ -84,3 +84,57 @@ export interface SeasonItem {
   note: string | null;
   sort: number;
 }
+
+// ─── Vendor portal (Slice 2) ─────────────────────────────────────────
+export type ScheduleStatus = 'confirmed' | 'declined' | 'pending';
+export type FeeStatus = 'due' | 'paid' | 'waived';
+export type MessageSender = 'vendor' | 'admin';
+
+export interface VendorOffering {
+  id: string;
+  vendor_id: string;
+  week_of: string;
+  headline: string | null;
+  items: string[];
+  note: string | null;
+  photo_url: string | null;
+  created_at: string;
+}
+
+export interface MarketDate {
+  id: string;
+  market_id: string;
+  date: string;
+  label: string | null;
+  sort: number;
+  markets?: { name: string; day_of_week: string } | null; // joined
+}
+
+export interface VendorScheduleRow {
+  id: string;
+  vendor_id: string;
+  market_date_id: string;
+  status: ScheduleStatus;
+  stall: string | null;
+  note: string | null;
+}
+
+export interface Fee {
+  id: string;
+  vendor_id: string;
+  period: string;
+  description: string | null;
+  amount_cents: number;
+  status: FeeStatus;
+  due_date: string | null;
+  created_at: string;
+}
+
+export interface Message {
+  id: string;
+  vendor_id: string;
+  sender: MessageSender;
+  author_name: string;
+  body: string;
+  created_at: string;
+}

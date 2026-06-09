@@ -2,6 +2,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { DemoBar } from '@/components/DemoBar';
 import { SurfacePlaceholder } from '@/components/SurfacePlaceholder';
 import { PublicShell } from '@/surfaces/public/PublicShell';
+import { VendorShell } from '@/surfaces/vendor/VendorShell';
 
 export function App() {
   const { profile, loading } = useAuth();
@@ -18,7 +19,7 @@ export function App() {
         ) : role === 'shopper' ? (
           <PublicShell />
         ) : role === 'vendor' ? (
-          <SurfacePlaceholder surface="vendor" />
+          <VendorShell />
         ) : role === 'admin' ? (
           <SurfacePlaceholder surface="admin" />
         ) : (

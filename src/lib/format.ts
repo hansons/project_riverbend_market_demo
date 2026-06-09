@@ -13,6 +13,25 @@ export function formatPrice(cents: number | null, unit: string | null): string {
   return `$${dollars}${unit ? ` / ${unit}` : ''}`;
 }
 
+/** "$90.00" from cents (no unit). */
+export function formatMoney(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+/** "Sat, Jun 13" from an ISO date string, parsed locally (no TZ shift). */
+export function formatDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+  return dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/** The Saturday of the current week, as an ISO date string (offering default). */
+export function thisSaturdayISO(): string {
+  const now = new Date();
+  const sat = new Date(now.getFullYear(), now.getMonth(), now.getDate() + ((6 - now.getDay() + 7) % 7));
+  return `${sat.getFullYear()}-${String(sat.getMonth() + 1).padStart(2, '0')}-${String(sat.getDate()).padStart(2, '0')}`;
+}
+
 const CATEGORY_EMOJI: Record<string, string> = {
   Produce: '🥬',
   Bakery: '🍞',

@@ -1,9 +1,16 @@
 import { useRef, useState } from 'react';
-import { addOffering, addOfferingsBulk, fetchOfferings, type OfferingInput } from '@/lib/vendorData';
+import {
+  addOffering,
+  addOfferingsBulk,
+  deleteOffering,
+  fetchOfferings,
+  updateOffering,
+  type OfferingInput,
+} from '@/lib/vendorData';
 import { useAsync } from '@/lib/useAsync';
 import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
 import { formatDate, thisSaturdayISO } from '@/lib/format';
-import type { Vendor } from '@/lib/types';
+import type { Vendor, VendorOffering } from '@/lib/types';
 
 const HEADER = ['week_of', 'headline', 'items', 'note'];
 const SAMPLE: string[][] = [
@@ -157,24 +164,99 @@ export function VendorOfferings({ vendor }: { vendor: Vendor }) {
         ) : (
           <div className="mt-3 space-y-3">
             {offerings.map((o) => (
-              <div key={o.id} className="card p-4">
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-brand-primary-dark">{o.headline ?? 'This week'}</p>
-                  <span className="text-xs text-brand-muted">Week of {formatDate(o.week_of)}</span>
-                </div>
-                {o.items.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {o.items.map((it) => (
-                      <span key={it} className="chip">{it}</span>
-                    ))}
-                  </div>
-                )}
-                {o.note && <p className="mt-2 text-sm text-brand-muted">{o.note}</p>}
-              </div>
+              <OfferingRow key={o.id} offering={o} onChanged={reload} />
             ))}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function OfferingRow({ offering, onChanged }: { offering: VendorOffering; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [weekOf, setWeekOf] = useState(offering.week_of);
+  const [headline, setHeadline] = useState(offering.headline ?? '');
+  const [items, setItems] = useState(offering.items.join(', '));
+  const [note, setNote] = useState(offering.note ?? '');
+  const [busy, setBusy] = useState(false);
+
+  function cancel() {
+    setWeekOf(offering.week_of);
+    setHeadline(offering.headline ?? '');
+    setItems(offering.items.join(', '));
+    setNote(offering.note ?? '');
+    setEditing(false);
+  }
+
+  async function save() {
+    setBusy(true);
+    await updateOffering(offering.id, {
+      week_of: weekOf,
+      headline: headline.trim() || null,
+      items: items.split(',').map((i) => i.trim()).filter(Boolean),
+      note: note.trim() || null,
+    });
+    setBusy(false);
+    setEditing(false);
+    onChanged();
+  }
+
+  async function remove() {
+    if (!window.confirm('Delete this post?')) return;
+    setBusy(true);
+    await deleteOffering(offering.id);
+    setBusy(false);
+    onChanged();
+  }
+
+  if (editing) {
+    return (
+      <div className="card space-y-3 p-4">
+        <div className="flex flex-wrap gap-3">
+          <label className="block">
+            <span className="field-label">Week of</span>
+            <input type="date" className="field-input" value={weekOf} onChange={(e) => setWeekOf(e.target.value)} />
+          </label>
+          <label className="block flex-1">
+            <span className="field-label">Headline</span>
+            <input className="field-input" value={headline} onChange={(e) => setHeadline(e.target.value)} />
+          </label>
+        </div>
+        <label className="block">
+          <span className="field-label">Items (comma-separated)</span>
+          <input className="field-input" value={items} onChange={(e) => setItems(e.target.value)} />
+        </label>
+        <label className="block">
+          <span className="field-label">Note</span>
+          <input className="field-input" value={note} onChange={(e) => setNote(e.target.value)} />
+        </label>
+        <div className="flex gap-2">
+          <button className="btn-primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+          <button className="btn-ghost" onClick={cancel} disabled={busy}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-semibold text-brand-primary-dark">{offering.headline ?? 'This week'}</p>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-brand-muted">Week of {formatDate(offering.week_of)}</span>
+          <button onClick={() => setEditing(true)} className="text-xs font-semibold text-brand-primary hover:underline">Edit</button>
+          <button onClick={remove} disabled={busy} className="text-xs font-semibold text-status-alert hover:underline">Delete</button>
+        </div>
+      </div>
+      {offering.items.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {offering.items.map((it) => (
+            <span key={it} className="chip">{it}</span>
+          ))}
+        </div>
+      )}
+      {offering.note && <p className="mt-2 text-sm text-brand-muted">{offering.note}</p>}
     </div>
   );
 }

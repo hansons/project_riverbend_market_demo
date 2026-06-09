@@ -79,6 +79,16 @@ export async function addOfferingsBulk(vendorId: string, offerings: OfferingInpu
   return error?.message ?? null;
 }
 
+export async function updateOffering(id: string, patch: OfferingInput): Promise<string | null> {
+  const { error } = await supabase.from('vendor_offerings').update(patch).eq('id', id);
+  return error?.message ?? null;
+}
+
+export async function deleteOffering(id: string): Promise<string | null> {
+  const { error } = await supabase.from('vendor_offerings').delete().eq('id', id);
+  return error?.message ?? null;
+}
+
 // ── Schedule ──
 export async function fetchMarketDates(): Promise<MarketDate[]> {
   const { data } = await supabase

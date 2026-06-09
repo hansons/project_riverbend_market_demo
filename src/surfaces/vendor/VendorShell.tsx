@@ -4,16 +4,18 @@ import { useAsync } from '@/lib/useAsync';
 import { fetchVendorById } from '@/lib/vendorData';
 import { VendorDashboard } from './VendorDashboard';
 import { VendorProfile } from './VendorProfile';
+import { VendorProducts } from './VendorProducts';
 import { VendorOfferings } from './VendorOfferings';
 import { VendorSchedule } from './VendorSchedule';
 import { VendorFees } from './VendorFees';
 import { VendorMessages } from './VendorMessages';
 
-export type VendorSection = 'dashboard' | 'profile' | 'offerings' | 'schedule' | 'fees' | 'messages';
+export type VendorSection = 'dashboard' | 'profile' | 'products' | 'offerings' | 'schedule' | 'fees' | 'messages';
 
 const SECTIONS: { key: VendorSection; label: string; icon: string }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
   { key: 'profile', label: 'My Profile', icon: '🌱' },
+  { key: 'products', label: 'Stand List', icon: '🥕' },
   { key: 'offerings', label: 'Weekly Offerings', icon: '🧺' },
   { key: 'schedule', label: 'Schedule', icon: '🗓️' },
   { key: 'fees', label: 'Fees', icon: '💳' },
@@ -81,6 +83,7 @@ export function VendorShell() {
         <div>
           {section === 'dashboard' && <VendorDashboard vendor={vendor} onGo={setSection} />}
           {section === 'profile' && <VendorProfile vendor={vendor} onSaved={reload} />}
+          {section === 'products' && <VendorProducts vendor={vendor} />}
           {section === 'offerings' && <VendorOfferings vendor={vendor} />}
           {section === 'schedule' && <VendorSchedule vendor={vendor} />}
           {section === 'fees' && <VendorFees vendor={vendor} />}

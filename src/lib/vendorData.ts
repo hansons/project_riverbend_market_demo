@@ -45,6 +45,40 @@ export async function addOffering(
   return error?.message ?? null;
 }
 
+// ── Stand list (products) — bulk replace from a CSV import ──
+export interface ProductInput {
+  name: string;
+  category: string | null;
+  unit: string | null;
+  price_cents: number | null;
+  in_season: boolean;
+  sort: number;
+}
+
+export async function replaceProducts(vendorId: string, products: ProductInput[]): Promise<string | null> {
+  const del = await supabase.from('vendor_products').delete().eq('vendor_id', vendorId);
+  if (del.error) return del.error.message;
+  if (products.length === 0) return null;
+  const rows = products.map((p) => ({ vendor_id: vendorId, ...p }));
+  const { error } = await supabase.from('vendor_products').insert(rows);
+  return error?.message ?? null;
+}
+
+// ── Weekly offerings — bulk append from a CSV import ──
+export interface OfferingInput {
+  week_of: string;
+  headline: string | null;
+  items: string[];
+  note: string | null;
+}
+
+export async function addOfferingsBulk(vendorId: string, offerings: OfferingInput[]): Promise<string | null> {
+  if (offerings.length === 0) return null;
+  const rows = offerings.map((o) => ({ vendor_id: vendorId, ...o }));
+  const { error } = await supabase.from('vendor_offerings').insert(rows);
+  return error?.message ?? null;
+}
+
 // ── Schedule ──
 export async function fetchMarketDates(): Promise<MarketDate[]> {
   const { data } = await supabase

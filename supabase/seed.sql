@@ -12,6 +12,7 @@ begin;
 
 -- Clear domain rows (children first). Vendors are UPSERTED below rather than
 -- deleted, so profiles.vendor_id links survive a re-seed.
+delete from announcements;
 delete from messages;
 delete from fees;
 delete from vendor_schedule;
@@ -404,5 +405,41 @@ insert into messages (vendor_id, sender, author_name, body, created_at) values
    'Thanks Dana! B12 is perfect. We will need power for the produce cooler this year.', '2026-06-01 14:40-07'),
   ('a0000000-0000-4000-8000-000000000001', 'admin',  'Dana — Market Manager',
    'Power is all set for B12. See you Saturday!', '2026-06-02 08:05-07');
+
+-- ─── Admin/cross-vendor data (Slice 3) — so the admin views aren't empty ──
+
+-- Other vendors' commitments for the next two Saturdays (d1 = 06-13, d2 = 06-20).
+-- Some stalls left blank on purpose, so there's assignment work to demo.
+insert into vendor_schedule (vendor_id, market_date_id, status, stall, note) values
+  ('a0000000-0000-4000-8000-000000000002', '33330000-0000-4000-8000-000000000001', 'confirmed', 'A3',  null),
+  ('a0000000-0000-4000-8000-000000000003', '33330000-0000-4000-8000-000000000001', 'confirmed', 'C5',  null),
+  ('a0000000-0000-4000-8000-000000000005', '33330000-0000-4000-8000-000000000001', 'confirmed', null,  null),
+  ('a0000000-0000-4000-8000-000000000006', '33330000-0000-4000-8000-000000000001', 'confirmed', 'B7',  null),
+  ('a0000000-0000-4000-8000-000000000009', '33330000-0000-4000-8000-000000000001', 'confirmed', null,  null),
+  ('a0000000-0000-4000-8000-000000000013', '33330000-0000-4000-8000-000000000001', 'confirmed', 'A8',  null),
+  ('a0000000-0000-4000-8000-000000000015', '33330000-0000-4000-8000-000000000001', 'pending',   null,  null),
+  ('a0000000-0000-4000-8000-000000000002', '33330000-0000-4000-8000-000000000002', 'confirmed', 'A3',  null),
+  ('a0000000-0000-4000-8000-000000000005', '33330000-0000-4000-8000-000000000002', 'confirmed', 'D2',  null),
+  ('a0000000-0000-4000-8000-000000000006', '33330000-0000-4000-8000-000000000002', 'confirmed', 'B7',  null),
+  ('a0000000-0000-4000-8000-000000000013', '33330000-0000-4000-8000-000000000002', 'declined',  null,  null),
+  ('a0000000-0000-4000-8000-000000000015', '33330000-0000-4000-8000-000000000002', 'confirmed', null,  null);
+
+-- Fees across vendors so the revenue report has numbers.
+insert into fees (vendor_id, period, description, amount_cents, status, due_date) values
+  ('a0000000-0000-4000-8000-000000000002', 'June 2026', 'Stall fees',                9000, 'due',  '2026-06-30'),
+  ('a0000000-0000-4000-8000-000000000002', 'May 2026',  'Stall fees',                9000, 'paid', '2026-05-31'),
+  ('a0000000-0000-4000-8000-000000000003', 'June 2026', 'Stall fees',                6000, 'due',  '2026-06-30'),
+  ('a0000000-0000-4000-8000-000000000005', 'June 2026', 'Stall fees',                9000, 'due',  '2026-06-30'),
+  ('a0000000-0000-4000-8000-000000000005', 'May 2026',  'Stall fees',                9000, 'paid', '2026-05-31'),
+  ('a0000000-0000-4000-8000-000000000006', 'June 2026', 'Stall fees',                6000, 'due',  '2026-06-30'),
+  ('a0000000-0000-4000-8000-000000000009', 'June 2026', 'Stall fees',                6000, 'paid', '2026-06-12'),
+  ('a0000000-0000-4000-8000-000000000013', 'June 2026', 'Stall fees',                9000, 'due',  '2026-06-30'),
+  ('a0000000-0000-4000-8000-000000000015', 'June 2026', 'Stall fees',                6000, 'due',  '2026-06-30'),
+  ('a0000000-0000-4000-8000-000000000015', 'Spring 2026','Annual vendor membership', 5000, 'paid', '2026-04-15');
+
+-- Announcements (the public one shows as a banner; the vendor one targets vendors).
+insert into announcements (title, body, audience, active) values
+  ('🎶 Live music this Saturday', 'The Cedar Sisters play the main stage 10am–noon. Come early for the best produce.', 'public', true),
+  ('Load-in moves to 7:30am', 'Starting June 20, vendor load-in opens at 7:30am. Shopper gates still open at 9.', 'vendors', true);
 
 commit;

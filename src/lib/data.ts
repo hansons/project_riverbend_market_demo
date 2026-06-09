@@ -1,5 +1,12 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import type { Market, SeasonItem, Vendor, VendorProduct } from '@/lib/types';
+import type {
+  Announcement,
+  AnnouncementAudience,
+  Market,
+  SeasonItem,
+  Vendor,
+  VendorProduct,
+} from '@/lib/types';
 
 // Read helpers for the public/shopper surface. Everything here is RLS-public,
 // so these work with the anon client (no login). When Supabase isn't connected
@@ -42,4 +49,49 @@ export async function fetchSeasonality(): Promise<SeasonItem[]> {
   if (!isSupabaseConfigured) return [];
   const { data } = await supabase.from('seasonality').select('*').order('sort');
   return (data as SeasonItem[]) ?? [];
+}
+
+/** Active announcements for the given audiences (public site passes public+all). */
+export async function fetchActiveAnnouncements(
+  audiences: AnnouncementAudience[],
+): Promise<Announcement[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data } = await supabase
+    .from('announcements')
+    .select('*')
+    .eq('active', true)
+    .in('audience', audiences)
+    .order('created_at', { ascending: false });
+  return (data as Announcement[]) ?? [];
+}
+
+export interface ApplicationInput {
+  name: string;
+  category: string;
+  town: string;
+  email: string;
+  tagline: string;
+  story: string;
+  practices: string[];
+  market_days: string[];
+}
+
+/** Public "Sell with us" submission → a pending vendor that lands in the admin queue. */
+export async function submitApplication(input: ApplicationInput): Promise<string | null> {
+  if (!isSupabaseConfigured) return 'Supabase not configured';
+  const base = input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const slug = `${base || 'vendor'}-${Date.now().toString(36)}`;
+  const { error } = await supabase.from('vendors').insert({
+    slug,
+    name: input.name,
+    category: input.category,
+    tagline: input.tagline || null,
+    story: input.story || null,
+    town: input.town || null,
+    email: input.email || null,
+    practices: input.practices,
+    market_days: input.market_days,
+    status: 'pending',
+  });
+  return error?.message ?? null;
 }

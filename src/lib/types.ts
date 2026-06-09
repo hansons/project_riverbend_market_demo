@@ -138,3 +138,25 @@ export interface Message {
   body: string;
   created_at: string;
 }
+
+// ─── Admin portal (Slice 3) ──────────────────────────────────────────
+export type AnnouncementAudience = 'public' | 'vendors' | 'all';
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  audience: AnnouncementAudience;
+  active: boolean;
+  created_at: string;
+}
+
+/** A vendor_schedule row joined with its vendor (admin stall-assignment view). */
+export interface ScheduleWithVendor {
+  id: string;
+  vendor_id: string;
+  market_date_id: string;
+  status: ScheduleStatus;
+  stall: string | null;
+  vendors?: { name: string; category: string; status: VendorStatus } | null;
+}

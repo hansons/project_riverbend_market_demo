@@ -4,11 +4,14 @@ import { PublicHome } from './PublicHome';
 import { VendorBrowse } from './VendorBrowse';
 import { VendorDetail } from './VendorDetail';
 import { MarketInfo } from './MarketInfo';
+import { ApplyForm } from './ApplyForm';
+import { AnnouncementBanner } from './AnnouncementBanner';
 
 const NAV = [
   { to: '/', label: 'Home' },
   { to: '/vendors', label: 'Vendors' },
   { to: '/markets', label: 'Visit' },
+  { to: '/apply', label: 'Sell with us' },
 ];
 
 export function PublicShell() {
@@ -21,6 +24,7 @@ export function PublicShell() {
   if (vendorMatch) view = <VendorDetail slug={decodeURIComponent(vendorMatch[1])} />;
   else if (path.startsWith('/vendors')) view = <VendorBrowse />;
   else if (path.startsWith('/markets')) view = <MarketInfo />;
+  else if (path.startsWith('/apply')) view = <ApplyForm />;
 
   const isActive = (to: string) =>
     to === '/' ? path === '/' : path.startsWith(to) || (to === '/vendors' && path.startsWith('/vendor/'));
@@ -55,6 +59,8 @@ export function PublicShell() {
           </div>
         </div>
       </nav>
+
+      <AnnouncementBanner />
 
       {view}
 

@@ -59,3 +59,12 @@ const SEASON_STYLE: Record<string, { label: string; className: string }> = {
 
 export const seasonStyle = (status: string) =>
   SEASON_STYLE[status] ?? { label: status, className: 'bg-brand-paper text-brand-muted' };
+
+const VENDOR_STATUS: Record<string, { label: string; className: string }> = {
+  active: { label: 'Active', className: 'bg-status-ok/10 text-status-ok' },
+  pending: { label: 'Pending', className: 'bg-status-warn/15 text-brand-berry' },
+  suspended: { label: 'Suspended', className: 'bg-status-alert/10 text-status-alert' },
+};
+
+export const vendorStatusStyle = (status: string) =>
+  VENDOR_STATUS[status] ?? { label: status, className: 'bg-brand-paper text-brand-muted' };

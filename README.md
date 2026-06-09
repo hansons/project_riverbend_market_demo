@@ -32,12 +32,12 @@ deploys static to Cloudflare Pages. Forked from the Sparrow staff-portal pattern
 - ✅ **Slice 0** — scaffold, brand/theme (CSS-var driven), auth + one-click personas, deploy config
 - ✅ **Slice 1** — public/shopper surface + market seed data
 - ✅ **Slice 2** — vendor portal (profile, weekly offerings, schedule, fees, messages) + vendor RLS
-- ⬜ **Slice 3** — admin portal
+- ✅ **Slice 3** — admin portal (applications, vendors, stall assignment, announcements, reports) + public "Sell with us" form + announcement banner + admin RLS
 - ⬜ **Slice 4** — platform view + live re-skin
 - ⬜ **Slice 5** — polish + deploy
 
-Until 3–4 land, the admin/owner personas show a placeholder that still proves the
-authenticated, RLS-gated session works.
+Until Slice 4 lands, the Platform Owner persona shows a placeholder that still proves
+the authenticated, RLS-gated session works.
 
 ---
 

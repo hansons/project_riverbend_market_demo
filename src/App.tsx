@@ -3,6 +3,7 @@ import { DemoBar } from '@/components/DemoBar';
 import { SurfacePlaceholder } from '@/components/SurfacePlaceholder';
 import { PublicShell } from '@/surfaces/public/PublicShell';
 import { VendorShell } from '@/surfaces/vendor/VendorShell';
+import { AdminShell } from '@/surfaces/admin/AdminShell';
 
 export function App() {
   const { profile, loading } = useAuth();
@@ -21,7 +22,7 @@ export function App() {
         ) : role === 'vendor' ? (
           <VendorShell />
         ) : role === 'admin' ? (
-          <SurfacePlaceholder surface="admin" />
+          <AdminShell />
         ) : (
           <SurfacePlaceholder surface="owner" />
         )}

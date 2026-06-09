@@ -22,6 +22,12 @@ const CATEGORY_EMOJI: Record<string, string> = {
   Mushrooms: '🍄',
   'Orchard & Fruit': '🍎',
   'Prepared Foods': '🍛',
+  'Honey & Preserves': '🍯',
+  'Coffee & Tea': '☕',
+  'Herbs & Plants': '🌿',
+  Seafood: '🐟',
+  'Body & Home': '🧼',
+  'Nuts & Grains': '🌰',
 };
 
 export const categoryEmoji = (category: string): string => CATEGORY_EMOJI[category] ?? '🧺';

@@ -1,5 +1,6 @@
 import { navigate } from '@/lib/router';
 import { categoryEmoji } from '@/lib/format';
+import { VendorImage } from './VendorImage';
 import type { Vendor } from '@/lib/types';
 
 export function VendorCard({ vendor }: { vendor: Vendor }) {
@@ -9,16 +10,10 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
       className="card group overflow-hidden text-left transition hover:shadow-lift"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-brand-paper">
-        {vendor.image_url ? (
-          <img
-            src={vendor.image_url}
-            alt={vendor.name}
-            loading="lazy"
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="grid h-full place-items-center text-4xl">{categoryEmoji(vendor.category)}</div>
-        )}
+        <VendorImage
+          vendor={vendor}
+          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+        />
         {vendor.featured && (
           <span className="absolute left-3 top-3 rounded-full bg-brand-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand-ink">
             Featured

@@ -2,6 +2,7 @@ import { fetchVendorBySlug, fetchVendorProducts } from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
 import { navigate } from '@/lib/router';
 import { categoryEmoji, formatPrice } from '@/lib/format';
+import { VendorImage } from './VendorImage';
 import type { Vendor } from '@/lib/types';
 
 export function VendorDetail({ slug }: { slug: string }) {
@@ -47,13 +48,7 @@ export function VendorDetail({ slug }: { slug: string }) {
         <div>
           <div className="card overflow-hidden">
             <div className="aspect-[16/9] bg-brand-paper">
-              {vendor.image_url ? (
-                <img src={vendor.image_url} alt={vendor.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="grid h-full place-items-center text-6xl">
-                  {categoryEmoji(vendor.category)}
-                </div>
-              )}
+              <VendorImage vendor={vendor} className="h-full w-full object-cover" emojiClass="text-6xl" />
             </div>
             <div className="p-6">
               <div className="flex flex-wrap items-center gap-2">

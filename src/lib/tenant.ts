@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { toWebp } from '@/lib/image';
 import type { Brand, Tenant, Theme } from '@/lib/types';
 
 // Riverbend brand, also used as the offline fallback so the app is themed even
@@ -21,6 +22,8 @@ export const FALLBACK_TENANT: Tenant = {
     muted: '107 99 84',
     line: '231 222 201',
   },
+  logo_url: null,
+  favicon_url: null,
 };
 
 export async function fetchActiveTenant(): Promise<Tenant> {
@@ -51,6 +54,32 @@ export async function fetchThemes(): Promise<Theme[]> {
 export async function applyThemeToActive(brand: Partial<Brand>): Promise<string | null> {
   if (!isSupabaseConfigured) return 'Supabase not configured';
   const { error } = await supabase.from('tenants').update({ brand }).eq('is_active', true);
+  return error?.message ?? null;
+}
+
+/** Upload a market logo/favicon (admin) → WebP in the shared bucket; returns its public URL. */
+export async function uploadMarketAsset(
+  file: File,
+  kind: 'logo' | 'favicon',
+): Promise<{ url: string } | { error: string }> {
+  if (!isSupabaseConfigured) return { error: 'Supabase not configured' };
+  const blob = await toWebp(file, kind === 'favicon' ? 96 : 480, 0.9);
+  const path = `market/${kind}-${Date.now()}.webp`;
+  const up = await supabase.storage.from('vendor-photos').upload(path, blob, {
+    contentType: 'image/webp',
+    upsert: true,
+  });
+  if (up.error) return { error: up.error.message };
+  return { url: supabase.storage.from('vendor-photos').getPublicUrl(path).data.publicUrl };
+}
+
+/** Set the active market's logo and/or favicon URL (admin+; enforced by RLS). */
+export async function updateMarketBranding(patch: {
+  logo_url?: string | null;
+  favicon_url?: string | null;
+}): Promise<string | null> {
+  if (!isSupabaseConfigured) return 'Supabase not configured';
+  const { error } = await supabase.from('tenants').update(patch).eq('is_active', true);
   return error?.message ?? null;
 }
 

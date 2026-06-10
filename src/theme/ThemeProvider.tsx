@@ -40,6 +40,20 @@ function applyBrand(brand: Partial<Brand>) {
   }
 }
 
+/** Reflect the market's name + favicon in the browser tab. */
+function applyIdentity(t: Tenant) {
+  document.title = `${t.name} — a Lodestone demo`;
+  if (!t.favicon_url) return;
+  let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.type = 'image/webp';
+  link.href = t.favicon_url;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [tenant, setTenant] = useState<Tenant>(FALLBACK_TENANT);
   const [tenants, setTenants] = useState<Tenant[]>([FALLBACK_TENANT]);
@@ -50,6 +64,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTenant(active);
     setTenants(all);
     applyBrand(active.brand);
+    applyIdentity(active);
     setLoading(false);
   }, []);
 
@@ -60,6 +75,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const preview = useCallback((t: Tenant) => {
     setTenant(t);
     applyBrand(t.brand);
+    applyIdentity(t);
   }, []);
 
   return (

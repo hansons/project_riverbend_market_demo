@@ -36,13 +36,22 @@ export function PublicShell() {
     <div>
       <nav className="border-b border-brand-line bg-brand-card/80 backdrop-blur">
         <div className="mx-auto flex max-w-content flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
-          <button onClick={() => go('/')} className="text-left">
-            <span className="block font-serif text-base font-semibold leading-none text-brand-primary-dark sm:text-lg">
-              {tenant.name}
-            </span>
-            {tenant.tagline && (
-              <span className="mt-0.5 hidden text-xs text-brand-muted sm:block">{tenant.tagline}</span>
+          <button onClick={() => go('/')} className="flex items-center gap-2.5 text-left">
+            {tenant.logo_url && (
+              <img
+                src={tenant.logo_url}
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-lg object-contain sm:h-10 sm:w-10"
+              />
             )}
+            <span>
+              <span className="block font-serif text-base font-semibold leading-none text-brand-primary-dark sm:text-lg">
+                {tenant.name}
+              </span>
+              {tenant.tagline && (
+                <span className="mt-0.5 hidden text-xs text-brand-muted sm:block">{tenant.tagline}</span>
+              )}
+            </span>
           </button>
           <div className="flex items-center gap-1 overflow-x-auto">
             {NAV.map((n) => (

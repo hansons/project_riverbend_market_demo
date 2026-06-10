@@ -26,6 +26,8 @@ export interface Tenant {
   region: string | null;
   brand: Partial<Brand>;
   is_active: boolean;
+  logo_url: string | null;
+  favicon_url: string | null;
 }
 
 export interface Theme {

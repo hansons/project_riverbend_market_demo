@@ -1,12 +1,22 @@
 import { useState } from 'react';
 import { fetchMarketDates } from '@/lib/vendorData';
-import { fetchScheduleForDate, setStall } from '@/lib/adminData';
+import {
+  fetchScheduleForDate,
+  fetchAllVendors,
+  setStalls,
+  addVendorToDay,
+  removeFromDay,
+  copyAssignments,
+} from '@/lib/adminData';
 import { useAsync } from '@/lib/useAsync';
-import { formatDate } from '@/lib/format';
+import { categoryEmoji, formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
+
+const TOTAL_STALLS = 48; // A–D × 12
 
 export function AdminStalls() {
   const { data: dates } = useAsync(fetchMarketDates, [], []);
+  const { data: allVendors } = useAsync(fetchAllVendors, [], []);
   const [picked, setPicked] = useState('');
   const dateId = picked || dates[0]?.id || '';
   const { data: rows, loading, reload } = useAsync(
@@ -14,32 +24,68 @@ export function AdminStalls() {
     [dateId],
     [],
   );
-  const [edits, setEdits] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState<string | null>(null);
+
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
 
   const confirmed = rows.filter((r) => r.status === 'confirmed');
-  const others = rows.filter((r) => r.status !== 'confirmed');
-  const unassigned = confirmed.filter((r) => !(edits[r.id] ?? r.stall)).length;
-  const occupied = Object.fromEntries(
-    confirmed
-      .filter((r) => edits[r.id] ?? r.stall)
-      .map((r) => [(edits[r.id] ?? r.stall) as string, { name: r.vendors?.name ?? 'Vendor' }]),
-  );
+  const scheduledIds = new Set(confirmed.map((r) => r.vendor_id));
+  const addable = allVendors.filter((v) => v.status === 'active' && !scheduledIds.has(v.id));
 
-  async function save(id: string, current: string | null) {
-    setBusy(id);
-    await setStall(id, edits[id] ?? current ?? '');
-    setBusy(null);
-    reload();
+  const selectedRow = confirmed.find((r) => r.vendor_id === selectedVendorId) ?? null;
+
+  const occupied: Record<string, { name: string }> = {};
+  for (const r of confirmed) for (const st of r.stalls) occupied[st] = { name: r.vendors?.name ?? 'Vendor' };
+  const filledCells = Object.keys(occupied).length;
+
+  // Previous date of the same market, for "Copy last market".
+  const current = dates.find((d) => d.id === dateId);
+  const prev = current
+    ? dates
+        .filter((d) => d.market_id === current.market_id && d.date < current.date)
+        .sort((a, b) => b.date.localeCompare(a.date))[0]
+    : undefined;
+
+  async function run(fn: () => Promise<string | null>) {
+    setBusy(true);
+    setHint(null);
+    const err = await fn();
+    setBusy(false);
+    if (err) setHint(err);
+    else reload();
+  }
+
+  async function clickCell(label: string) {
+    if (!selectedRow) {
+      setHint('Pick a vendor on the right first, then click stalls to place them.');
+      return;
+    }
+    const owner = confirmed.find((r) => r.stalls.includes(label));
+    if (owner && owner.vendor_id !== selectedRow.vendor_id) {
+      setHint(`${label} is taken by ${owner.vendors?.name}.`);
+      return;
+    }
+    const cur = selectedRow.stalls;
+    const next = cur.includes(label) ? cur.filter((s) => s !== label) : [...cur, label];
+    await run(() => setStalls(selectedRow.id, next));
+  }
+
+  function copyLast() {
+    if (!prev) return;
+    if (!window.confirm(`Copy ${prev.markets?.name}'s lineup from ${formatDate(prev.date)} onto this day? Existing assignments for matching vendors will be overwritten.`))
+      return;
+    run(() => copyAssignments(prev.id, dateId));
   }
 
   return (
-    <div>
+    <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl">Stall assignment</h2>
           <p className="mt-1 text-sm text-brand-muted">
-            Assign stalls for a market day. Vendors see their stall the moment you save it.
+            Pick a vendor, then click stalls on the map to place them. Vendors can hold more than one
+            stall. Dashed cells are open.
           </p>
         </div>
         <label className="block">
@@ -54,58 +100,103 @@ export function AdminStalls() {
         </label>
       </div>
 
-      <div className="mt-4 flex gap-2 text-sm">
-        <span className="chip">{confirmed.length} confirmed</span>
-        <span className={`chip ${unassigned ? 'text-brand-berry' : ''}`}>{unassigned} unassigned</span>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <button
+          className="btn-outline px-3 py-1.5 text-sm disabled:opacity-50"
+          onClick={copyLast}
+          disabled={busy || !prev}
+          title={prev ? '' : 'No earlier date for this market'}
+        >
+          ↺ {prev ? `Copy ${prev.markets?.name} · ${formatDate(prev.date)}` : 'No previous market to copy'}
+        </button>
+        <span className="chip">{confirmed.length} vendors</span>
+        <span className="chip">{filledCells} stalls filled</span>
+        <span className="chip">{TOTAL_STALLS - filledCells} open</span>
+        {addable.length > 0 && <span className="chip text-brand-berry">{addable.length} not scheduled</span>}
       </div>
 
-      {!loading && dateId && (
-        <div className="mt-4">
-          <MarketMap occupied={occupied} />
-          <p className="mt-2 text-xs text-brand-muted">
-            Dashed cells are open spots that still need filling. Stalls outside the A–D grid (e.g. the
-            Wednesday lot) show in the list below.
-          </p>
-        </div>
-      )}
+      {hint && <p className="text-sm text-brand-berry">{hint}</p>}
 
-      {loading ? (
-        <div className="mt-5 h-48 animate-pulse rounded-2xl bg-brand-card" />
-      ) : (
-        <div className="card mt-4 divide-y divide-brand-line">
-          {confirmed.map((r) => {
-            const value = edits[r.id] ?? r.stall ?? '';
-            const dirty = (edits[r.id] ?? r.stall ?? '') !== (r.stall ?? '');
-            return (
-              <div key={r.id} className="flex items-center justify-between gap-3 p-4">
-                <span className="min-w-0 truncate font-medium text-brand-ink">{r.vendors?.name ?? 'Vendor'}</span>
-                <div className="flex items-center gap-2">
-                  <input
-                    value={value}
-                    onChange={(e) => setEdits((m) => ({ ...m, [r.id]: e.target.value }))}
-                    placeholder="Stall #"
-                    className="w-24 rounded-lg border border-brand-line bg-brand-card px-2.5 py-1.5 text-sm focus:border-brand-primary focus:outline-none"
-                  />
-                  <button
-                    onClick={() => save(r.id, r.stall)}
-                    disabled={busy === r.id || !dirty}
-                    className="btn-primary px-3 py-1.5 disabled:opacity-40"
+      {!loading && dateId && <MarketMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} />}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Scheduled (placeable) */}
+        <div>
+          <h3 className="text-lg">Scheduled today ({confirmed.length})</h3>
+          <p className="mt-0.5 text-xs text-brand-muted">Click a vendor to select, then click map stalls.</p>
+          {loading ? (
+            <div className="mt-3 h-40 animate-pulse rounded-2xl bg-brand-card" />
+          ) : confirmed.length === 0 ? (
+            <p className="mt-2 text-sm text-brand-muted">No confirmed vendors yet — add some, or copy last market.</p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {confirmed.map((r) => {
+                const selected = r.vendor_id === selectedVendorId;
+                return (
+                  <div
+                    key={r.id}
+                    className={`card p-3 ${selected ? 'ring-2 ring-brand-accent' : ''}`}
                   >
-                    Save
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        className="min-w-0 truncate text-left text-sm font-medium text-brand-ink"
+                        onClick={() => setSelectedVendorId(selected ? null : r.vendor_id)}
+                      >
+                        {categoryEmoji(r.vendors?.category ?? '')} {r.vendors?.name}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (selected) setSelectedVendorId(null);
+                          run(() => removeFromDay(r.id));
+                        }}
+                        disabled={busy}
+                        className="shrink-0 text-xs font-semibold text-status-alert hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {r.stalls.length ? (
+                        r.stalls.map((s) => <span key={s} className="chip">{s}</span>)
+                      ) : (
+                        <span className="text-xs text-brand-berry">
+                          {selected ? 'Click open stalls on the map →' : 'No stall — select & place'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Add vendors */}
+        <div>
+          <h3 className="text-lg">Add a vendor ({addable.length})</h3>
+          <p className="mt-0.5 text-xs text-brand-muted">Active vendors not yet on this day.</p>
+          {addable.length === 0 ? (
+            <p className="mt-2 text-sm text-brand-muted">Every active vendor is scheduled.</p>
+          ) : (
+            <div className="mt-3 card divide-y divide-brand-line">
+              {addable.map((v) => (
+                <div key={v.id} className="flex items-center justify-between gap-2 p-3 text-sm">
+                  <span className="min-w-0 truncate">
+                    {categoryEmoji(v.category)} <span className="font-medium text-brand-ink">{v.name}</span>
+                  </span>
+                  <button
+                    onClick={() => run(() => addVendorToDay(v.id, dateId)).then(() => setSelectedVendorId(v.id))}
+                    disabled={busy}
+                    className="shrink-0 rounded-lg border border-brand-line px-3 py-1 text-xs font-semibold hover:bg-brand-paper"
+                  >
+                    + Add
                   </button>
                 </div>
-              </div>
-            );
-          })}
-          {confirmed.length === 0 && <p className="p-4 text-sm text-brand-muted">No confirmed vendors for this day yet.</p>}
+              ))}
+            </div>
+          )}
         </div>
-      )}
-
-      {others.length > 0 && (
-        <p className="mt-3 text-xs text-brand-muted">
-          Also for this day: {others.map((o) => `${o.vendors?.name} (${o.status})`).join(', ')}.
-        </p>
-      )}
+      </div>
     </div>
   );
 }

@@ -35,7 +35,7 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
 
   const today = todayISO();
   const myStops = sched
-    .filter((s) => s.status === 'confirmed' && s.stall && /^[A-D]\d+$/.test(s.stall))
+    .filter((s) => s.status === 'confirmed' && s.stalls.some((st) => /^[A-D]\d+$/.test(st)))
     .map((s) => ({ s, d: dates.find((x) => x.id === s.market_date_id) }))
     .filter((x) => x.d && x.d.date >= today)
     .sort((a, b) => a.d!.date.localeCompare(b.d!.date));
@@ -51,7 +51,7 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
       {myNext && (
         <div className="mt-4">
           <MarketMap
-            highlight={myNext.s.stall}
+            highlight={myNext.s.stalls}
             highlightText={`You · ${myNext.d!.markets?.name ?? ''} ${formatDate(myNext.d!.date)}`}
           />
         </div>
@@ -75,8 +75,10 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
                   </p>
                   <div className="mt-0.5 flex items-center gap-2 text-xs">
                     <span className={`rounded-full px-2 py-0.5 font-semibold ${pill.className}`}>{pill.label}</span>
-                    {row?.status === 'confirmed' && row.stall && (
-                      <span className="text-brand-muted">Stall {row.stall}</span>
+                    {row?.status === 'confirmed' && row.stalls.length > 0 && (
+                      <span className="text-brand-muted">
+                        Stall{row.stalls.length > 1 ? 's' : ''} {row.stalls.join(', ')}
+                      </span>
                     )}
                     {d.label && <span className="text-brand-accent">{d.label}</span>}
                   </div>

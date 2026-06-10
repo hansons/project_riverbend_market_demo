@@ -35,7 +35,9 @@ export function VendorDashboard({ vendor, onGo }: { vendor: Vendor; onGo: (s: Ve
   const nextDate = data.dates
     .filter((d) => confirmedIds.has(d.id) && d.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date))[0];
-  const nextStall = nextDate ? data.sched.find((s) => s.market_date_id === nextDate.id)?.stall : null;
+  const nextStall = nextDate
+    ? (data.sched.find((s) => s.market_date_id === nextDate.id)?.stalls ?? []).join(', ') || null
+    : null;
   const lastMessage = data.messages[data.messages.length - 1];
   const latestOffering = data.offerings[0];
   const openDates = data.dates.filter((d) => d.date >= today && !data.sched.some((s) => s.market_date_id === d.id)).length;

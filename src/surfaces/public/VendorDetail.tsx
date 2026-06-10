@@ -20,7 +20,7 @@ function todayISO(): string {
 }
 
 type MapData = {
-  stall: string;
+  stalls: string[];
   date: string;
   market: string;
   occupied: Record<string, { name: string; slug?: string }>;
@@ -49,7 +49,7 @@ export function VendorDetail({ slug }: { slug: string }) {
       const [confirmed, dates] = await Promise.all([fetchVendorConfirmed(vendor.id), fetchMarketDates()]);
       const today = todayISO();
       const stops = confirmed
-        .filter((c) => /^[A-D]\d+$/.test(c.stall))
+        .filter((c) => c.stalls.some((st) => /^[A-D]\d+$/.test(st)))
         .map((c) => ({ ...c, d: dates.find((x) => x.id === c.market_date_id) }))
         .filter((x) => x.d && x.d.date >= today)
         .sort((a, b) => a.d!.date.localeCompare(b.d!.date));
@@ -57,7 +57,7 @@ export function VendorDetail({ slug }: { slug: string }) {
       if (!next) return null;
       const assignments = await fetchAssignmentsForDate(next.market_date_id);
       const occupied = Object.fromEntries(assignments.map((a) => [a.stall, { name: a.vendor, slug: a.slug }]));
-      return { stall: next.stall, date: next.d!.date, market: next.d!.markets?.name ?? 'Market', occupied };
+      return { stalls: next.stalls, date: next.d!.date, market: next.d!.markets?.name ?? 'Market', occupied };
     },
     [vendor?.id],
     null,
@@ -202,10 +202,11 @@ export function VendorDetail({ slug }: { slug: string }) {
         <div className="mt-8">
           <h2 className="text-xl">Find {vendor.name} at the market</h2>
           <p className="mt-1 text-sm text-brand-muted">
-            Stall {mapData.stall} · {mapData.market} · {formatDate(mapData.date)}
+            Stall{mapData.stalls.length > 1 ? 's' : ''} {mapData.stalls.join(', ')} · {mapData.market} ·{' '}
+            {formatDate(mapData.date)}
           </p>
           <div className="mt-3">
-            <MarketMap occupied={mapData.occupied} highlight={mapData.stall} highlightText={vendor.name} />
+            <MarketMap occupied={mapData.occupied} highlight={mapData.stalls} highlightText={vendor.name} />
           </div>
         </div>
       )}

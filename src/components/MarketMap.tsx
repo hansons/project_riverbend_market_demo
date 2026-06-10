@@ -35,12 +35,15 @@ export function MarketMap({
   occupied = {},
   highlight,
   highlightText,
+  onCellClick,
 }: {
   occupied?: Record<string, MapOccupant>;
-  highlight?: string | null;
+  highlight?: string | string[] | null;
   highlightText?: string;
+  onCellClick?: (label: string) => void;
 }) {
-  const hiStall = highlight ? STALLS.find((s) => s.label === highlight) : undefined;
+  const hiSet = new Set(Array.isArray(highlight) ? highlight : highlight ? [highlight] : []);
+  const hiStall = STALLS.find((s) => hiSet.has(s.label));
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-brand-line bg-brand-paper p-3">
@@ -57,7 +60,7 @@ export function MarketMap({
 
         {STALLS.map((s) => {
           const occ = occupied[s.label];
-          const isHi = highlight === s.label;
+          const isHi = hiSet.has(s.label);
           const fill = isHi
             ? 'rgb(var(--brand-accent) / 0.85)'
             : occ
@@ -73,11 +76,14 @@ export function MarketMap({
             : occ
               ? 'rgb(var(--brand-primary-dark))'
               : 'rgb(var(--brand-muted))';
-          const clickable = Boolean(occ?.slug);
+          const clickable = Boolean(onCellClick) || Boolean(occ?.slug);
           return (
             <g
               key={s.label}
-              onClick={() => occ?.slug && navigate(`/vendor/${occ.slug}`)}
+              onClick={() => {
+                if (onCellClick) onCellClick(s.label);
+                else if (occ?.slug) navigate(`/vendor/${occ.slug}`);
+              }}
               style={{ cursor: clickable ? 'pointer' : 'default' }}
             >
               <title>{occ ? `${s.label} — ${occ.name}` : `${s.label} — available`}</title>

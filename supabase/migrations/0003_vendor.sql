@@ -37,7 +37,7 @@ create table vendor_schedule (
   vendor_id      uuid not null references vendors(id) on delete cascade,
   market_date_id uuid not null references market_dates(id) on delete cascade,
   status         schedule_status not null default 'pending',
-  stall          text,                    -- assigned by admin (Slice 3)
+  stalls         text[] not null default '{}',  -- assigned by admin; a vendor can hold 1+ stalls
   note           text,
   unique (vendor_id, market_date_id)
 );

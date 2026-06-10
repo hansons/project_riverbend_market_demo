@@ -134,7 +134,7 @@ export interface VendorScheduleRow {
   vendor_id: string;
   market_date_id: string;
   status: ScheduleStatus;
-  stall: string | null;
+  stalls: string[];
   note: string | null;
 }
 
@@ -187,6 +187,6 @@ export interface ScheduleWithVendor {
   vendor_id: string;
   market_date_id: string;
   status: ScheduleStatus;
-  stall: string | null;
+  stalls: string[];
   vendors?: { name: string; category: string; status: VendorStatus } | null;
 }

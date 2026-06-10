@@ -34,17 +34,43 @@ export async function setVendorFeatured(id: string, featured: boolean): Promise<
 export async function fetchScheduleForDate(marketDateId: string): Promise<ScheduleWithVendor[]> {
   const { data } = await supabase
     .from('vendor_schedule')
-    .select('id, vendor_id, market_date_id, status, stall, vendors(name, category, status)')
+    .select('id, vendor_id, market_date_id, status, stalls, vendors(name, category, status)')
     .eq('market_date_id', marketDateId);
   // PostgREST types the embedded vendor as an array; the FK makes it one object.
   return (data as unknown as ScheduleWithVendor[]) ?? [];
 }
 
-export async function setStall(scheduleId: string, stall: string): Promise<string | null> {
+export async function setStalls(scheduleId: string, stalls: string[]): Promise<string | null> {
+  const { error } = await supabase.from('vendor_schedule').update({ stalls }).eq('id', scheduleId);
+  return error?.message ?? null;
+}
+
+/** Add an active vendor to a market day as confirmed (preserves any existing stalls). */
+export async function addVendorToDay(vendorId: string, marketDateId: string): Promise<string | null> {
   const { error } = await supabase
     .from('vendor_schedule')
-    .update({ stall: stall.trim() || null })
-    .eq('id', scheduleId);
+    .upsert(
+      { vendor_id: vendorId, market_date_id: marketDateId, status: 'confirmed' },
+      { onConflict: 'vendor_id,market_date_id' },
+    );
+  return error?.message ?? null;
+}
+
+export async function removeFromDay(scheduleId: string): Promise<string | null> {
+  const { error } = await supabase.from('vendor_schedule').delete().eq('id', scheduleId);
+  return error?.message ?? null;
+}
+
+/** Clone the confirmed lineup (vendors + stalls) from one market date onto another. */
+export async function copyAssignments(fromDateId: string, toDateId: string): Promise<string | null> {
+  const rows = await fetchScheduleForDate(fromDateId);
+  const payload = rows
+    .filter((r) => r.status === 'confirmed')
+    .map((r) => ({ vendor_id: r.vendor_id, market_date_id: toDateId, status: 'confirmed', stalls: r.stalls }));
+  if (!payload.length) return null;
+  const { error } = await supabase
+    .from('vendor_schedule')
+    .upsert(payload, { onConflict: 'vendor_id,market_date_id' });
   return error?.message ?? null;
 }
 

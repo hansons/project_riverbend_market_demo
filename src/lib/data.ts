@@ -27,30 +27,29 @@ export interface StallAssignment {
   slug: string;
 }
 
-/** Confirmed stall assignments for a given market date (public-readable). */
+/** Confirmed stall assignments for a market date (public-readable), one row per cell. */
 export async function fetchAssignmentsForDate(marketDateId: string): Promise<StallAssignment[]> {
   if (!isSupabaseConfigured) return [];
   const { data } = await supabase
     .from('vendor_schedule')
-    .select('stall, vendors(name, slug, status)')
+    .select('stalls, vendors(name, slug, status)')
     .eq('market_date_id', marketDateId)
     .eq('status', 'confirmed');
-  const rows = (data as unknown as { stall: string | null; vendors: { name: string; slug: string; status: string } | null }[]) ?? [];
+  const rows = (data as unknown as { stalls: string[] | null; vendors: { name: string; slug: string; status: string } | null }[]) ?? [];
   return rows
-    .filter((r) => r.stall && r.vendors && r.vendors.status === 'active')
-    .map((r) => ({ stall: r.stall as string, vendor: r.vendors!.name, slug: r.vendors!.slug }));
+    .filter((r) => r.vendors && r.vendors.status === 'active' && r.stalls && r.stalls.length)
+    .flatMap((r) => r.stalls!.map((stall) => ({ stall, vendor: r.vendors!.name, slug: r.vendors!.slug })));
 }
 
-/** A vendor's own confirmed stall assignments (market_date_id + stall). */
-export async function fetchVendorConfirmed(vendorId: string): Promise<{ market_date_id: string; stall: string }[]> {
+/** A vendor's own confirmed stall assignments (market_date_id + stalls). */
+export async function fetchVendorConfirmed(vendorId: string): Promise<{ market_date_id: string; stalls: string[] }[]> {
   if (!isSupabaseConfigured) return [];
   const { data } = await supabase
     .from('vendor_schedule')
-    .select('market_date_id, stall')
+    .select('market_date_id, stalls')
     .eq('vendor_id', vendorId)
-    .eq('status', 'confirmed')
-    .not('stall', 'is', null);
-  return (data as { market_date_id: string; stall: string }[]) ?? [];
+    .eq('status', 'confirmed');
+  return ((data as { market_date_id: string; stalls: string[] }[]) ?? []).filter((r) => r.stalls && r.stalls.length);
 }
 
 /** Upcoming community events (on/after `fromISO`), with their market joined. */

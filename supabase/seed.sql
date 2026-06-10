@@ -335,6 +335,9 @@ insert into vendor_products (vendor_id, name, category, unit, price_cents, in_se
 
 -- ─── Seasonality ("what's in season" — tuned for June in the valley) ──
 insert into seasonality (item, category, emoji, status, months, note, sort) values
+  ('Tamales & tacos',  'Prepared Food', '🌮', 'ready', '{1,2,3,4,5,6,7,8,9,10,11,12}', 'La Cocina Verde — made to order', 1),
+  ('Samosas & chaat',  'Prepared Food', '🥟', 'ready', '{1,2,3,4,5,6,7,8,9,10,11,12}', 'Masala Cart — veg & vegan', 2),
+  ('Cold brew coffee', 'Prepared Food', '☕', 'ready', '{1,2,3,4,5,6,7,8,9,10,11,12}', 'Foghorn Coffee Roasters', 3),
   ('Strawberries',    'Fruit',     '🍓', 'peak',   '{5,6}',                          'Hood berries — eat within two days', 1),
   ('Sugar snap peas', 'Vegetable', '🫛', 'peak',   '{5,6}',                          'Sweetest right now', 2),
   ('Salad greens',    'Vegetable', '🥬', 'peak',   '{4,5,6,7,8,9,10}',               'All season long', 3),

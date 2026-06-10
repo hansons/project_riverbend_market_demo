@@ -55,6 +55,7 @@ const SEASON_STYLE: Record<string, { label: string; className: string }> = {
   peak: { label: 'At peak', className: 'bg-status-ok/10 text-status-ok' },
   coming: { label: 'Coming soon', className: 'bg-status-info/10 text-status-info' },
   ending: { label: 'Last call', className: 'bg-status-warn/15 text-brand-berry' },
+  ready: { label: 'Ready now', className: 'bg-brand-berry/10 text-brand-berry' },
 };
 
 export const seasonStyle = (status: string) =>

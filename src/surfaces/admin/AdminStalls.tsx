@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { fetchMarketDates } from '@/lib/vendorData';
 import {
   fetchScheduleForDate,
@@ -14,6 +14,7 @@ import { useAsync } from '@/lib/useAsync';
 import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
 import { categoryEmoji, formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
+import { CsvToolbar } from '@/components/CsvToolbar';
 
 const TOTAL_STALLS = 48; // A–D × 12
 
@@ -55,7 +56,6 @@ export function AdminStalls() {
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [importPreview, setImportPreview] = useState<{ rows: ImportRow[]; skipped: number; dates: Set<string> } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const confirmed = rows.filter((r) => r.status === 'confirmed');
   const scheduledIds = new Set(confirmed.map((r) => r.vendor_id));
@@ -126,7 +126,6 @@ export function AdminStalls() {
 
   async function onImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
     setHint(null);
     const parsed = parseCSVObjects(await file.text());
@@ -184,16 +183,23 @@ export function AdminStalls() {
             stall. Dashed cells are open.
           </p>
         </div>
-        <label className="block">
-          <span className="field-label">Market day</span>
-          <select className="field-input" value={dateId} onChange={(e) => setPicked(e.target.value)}>
-            {upcomingDates.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.markets?.name} · {formatDate(d.date)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex items-end gap-3">
+          <label className="block">
+            <span className="field-label">Market day</span>
+            <select className="field-input" value={dateId} onChange={(e) => setPicked(e.target.value)}>
+              {upcomingDates.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.markets?.name} · {formatDate(d.date)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <CsvToolbar
+            onSample={() => downloadCSV('stall-assignments-sample.csv', toCSV(CSV_SAMPLE))}
+            onExport={exportSeason}
+            onImport={onImportFile}
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -210,6 +216,27 @@ export function AdminStalls() {
         <span className="chip">{TOTAL_STALLS - filledCells} open</span>
         {addable.length > 0 && <span className="chip text-brand-berry">{addable.length} not scheduled</span>}
       </div>
+
+      {importPreview && (
+        <div className="card border-brand-accent p-5">
+          <p className="font-semibold text-brand-primary-dark">
+            Apply {importPreview.rows.length} assignment{importPreview.rows.length === 1 ? '' : 's'} across{' '}
+            {importPreview.dates.size} date{importPreview.dates.size === 1 ? '' : 's'}?
+          </p>
+          {importPreview.skipped > 0 && (
+            <p className="mt-1 text-xs text-brand-berry">
+              {importPreview.skipped} row{importPreview.skipped === 1 ? '' : 's'} skipped — unknown vendor or date.
+            </p>
+          )}
+          <p className="mt-1 text-xs text-brand-muted">Existing assignments for the same vendor + date are overwritten.</p>
+          <div className="mt-3 flex gap-2">
+            <button className="btn-primary" onClick={applyImport} disabled={busy}>
+              {busy ? 'Applying…' : 'Apply import'}
+            </button>
+            <button className="btn-ghost" onClick={() => setImportPreview(null)} disabled={busy}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {!loading && dateId && activeCats.length > 0 && (
         <div>
@@ -351,46 +378,6 @@ export function AdminStalls() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Season import / export */}
-      <div className="card p-5">
-        <h3 className="text-lg">Set up the season — import / export</h3>
-        <p className="mt-1 text-sm text-brand-muted">
-          Export every date’s assignments, edit the whole season in a spreadsheet, and import it back.
-          Columns: <code className="rounded bg-brand-paper px-1">date, market, vendor, slug, stalls, status</code>{' '}
-          (stalls space-separated, e.g. <code className="rounded bg-brand-paper px-1">B11 B12</code>). Rows are
-          added or updated by vendor + date.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button className="btn-outline" onClick={() => downloadCSV('stall-assignments-sample.csv', toCSV(CSV_SAMPLE))}>
-            ⬇ Sample CSV
-          </button>
-          <button className="btn-outline" onClick={exportSeason}>⬇ Export season</button>
-          <button className="btn-primary" onClick={() => fileRef.current?.click()}>⬆ Import CSV</button>
-          <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onImportFile} className="hidden" />
-        </div>
-
-        {importPreview && (
-          <div className="mt-4 rounded-xl border border-brand-accent bg-brand-paper p-4">
-            <p className="font-semibold text-brand-primary-dark">
-              Apply {importPreview.rows.length} assignment{importPreview.rows.length === 1 ? '' : 's'} across{' '}
-              {importPreview.dates.size} date{importPreview.dates.size === 1 ? '' : 's'}?
-            </p>
-            {importPreview.skipped > 0 && (
-              <p className="mt-1 text-xs text-brand-berry">
-                {importPreview.skipped} row{importPreview.skipped === 1 ? '' : 's'} skipped — unknown vendor or date.
-              </p>
-            )}
-            <p className="mt-1 text-xs text-brand-muted">Existing assignments for the same vendor + date are overwritten.</p>
-            <div className="mt-3 flex gap-2">
-              <button className="btn-primary" onClick={applyImport} disabled={busy}>
-                {busy ? 'Applying…' : 'Apply import'}
-              </button>
-              <button className="btn-ghost" onClick={() => setImportPreview(null)} disabled={busy}>Cancel</button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   addAnnouncementsBulk,
   createAnnouncement,
@@ -7,6 +7,7 @@ import {
 } from '@/lib/adminData';
 import { useAsync } from '@/lib/useAsync';
 import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
+import { CsvToolbar } from '@/components/CsvToolbar';
 import type { AnnouncementAudience } from '@/lib/types';
 
 const AUDIENCES: { value: AnnouncementAudience; label: string }[] = [
@@ -39,7 +40,6 @@ export function AdminAnnouncements() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<ImportRow[] | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   async function post() {
     if (!title.trim() || !body.trim()) return;
@@ -63,7 +63,6 @@ export function AdminAnnouncements() {
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
     setError(null);
     const rows: ImportRow[] = parseCSVObjects(await file.text())
@@ -100,10 +99,20 @@ export function AdminAnnouncements() {
   return (
     <div className="flex flex-col gap-6">
       <div className="card p-6">
-        <h2 className="text-xl">Post an announcement</h2>
-        <p className="mt-1 text-sm text-brand-muted">
-          Public announcements show as a banner on the shopper site immediately.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl">Post an announcement</h2>
+            <p className="mt-1 text-sm text-brand-muted">
+              Public announcements show as a banner on the shopper site immediately.
+            </p>
+          </div>
+          <CsvToolbar
+            onSample={() => downloadCSV('announcements-sample.csv', toCSV(CSV_SAMPLE))}
+            onExport={exportAll}
+            onImport={onFile}
+            exportDisabled={!list.length}
+          />
+        </div>
         <div className="mt-4 space-y-3">
           <input className="field-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
           <textarea className="field-input min-h-[80px]" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message" />
@@ -120,46 +129,30 @@ export function AdminAnnouncements() {
         </div>
       </div>
 
-      <div className="card p-6 order-last">
-        <h3 className="text-lg">Bulk import / export</h3>
-        <p className="mt-1 text-sm text-brand-muted">
-          Draft a batch of announcements in a spreadsheet, then import them. Columns:{' '}
-          <code className="rounded bg-brand-paper px-1">title, body, audience, active</code> (audience =
-          public / vendors / all; active = true / false). Imported rows are <strong>added</strong>.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button className="btn-outline" onClick={() => downloadCSV('announcements-sample.csv', toCSV(CSV_SAMPLE))}>
-            ⬇ Sample CSV
-          </button>
-          <button className="btn-outline" onClick={exportAll} disabled={!list.length}>⬇ Export current</button>
-          <button className="btn-primary" onClick={() => fileRef.current?.click()}>⬆ Import CSV</button>
-          <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
-        </div>
-        {error && <p className="mt-2 text-sm text-status-alert">{error}</p>}
+      {error && <p className="text-sm text-status-alert">{error}</p>}
 
-        {preview && (
-          <div className="mt-4 rounded-xl border border-brand-accent bg-brand-paper p-4">
-            <p className="font-semibold text-brand-primary-dark">
-              Add {preview.length} announcement{preview.length === 1 ? '' : 's'}?
-            </p>
-            <ul className="mt-2 space-y-1 text-sm">
-              {preview.map((a, i) => (
-                <li key={i} className="text-brand-ink">
-                  <span className="text-[11px] uppercase tracking-wide text-brand-accent">{a.audience}</span>
-                  {!a.active && <span className="ml-1 text-xs text-brand-muted">(off)</span>} —{' '}
-                  {a.title || '(no title)'}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-3 flex gap-2">
-              <button className="btn-primary" onClick={applyImport} disabled={busy}>
-                {busy ? 'Adding…' : 'Add announcements'}
-              </button>
-              <button className="btn-ghost" onClick={() => setPreview(null)} disabled={busy}>Cancel</button>
-            </div>
+      {preview && (
+        <div className="card border-brand-accent p-5">
+          <p className="font-semibold text-brand-primary-dark">
+            Add {preview.length} announcement{preview.length === 1 ? '' : 's'}?
+          </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {preview.map((a, i) => (
+              <li key={i} className="text-brand-ink">
+                <span className="text-[11px] uppercase tracking-wide text-brand-accent">{a.audience}</span>
+                {!a.active && <span className="ml-1 text-xs text-brand-muted">(off)</span>} —{' '}
+                {a.title || '(no title)'}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex gap-2">
+            <button className="btn-primary" onClick={applyImport} disabled={busy}>
+              {busy ? 'Adding…' : 'Add announcements'}
+            </button>
+            <button className="btn-ghost" onClick={() => setPreview(null)} disabled={busy}>Cancel</button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div>
         <h3 className="text-lg">All announcements</h3>

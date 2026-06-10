@@ -31,14 +31,14 @@ export function AdminAppearance() {
           <AssetUploader
             kind="logo"
             label="Market logo"
-            hint="Beside your market name in the header — a square mark works best."
+            hint="Recommended: square, ~512×512px (a transparent PNG works great). Shown beside your market name."
             currentUrl={tenant.logo_url}
             onChanged={reload}
           />
           <AssetUploader
             kind="favicon"
             label="Favicon"
-            hint="The browser-tab icon — keep it small and simple."
+            hint="Recommended: square, 64×64px (any small square). The browser-tab icon."
             currentUrl={tenant.favicon_url}
             onChanged={reload}
           />
@@ -48,7 +48,7 @@ export function AdminAppearance() {
             kind="banner"
             variant="wide"
             label="Home banner"
-            hint="A wide photo behind the home-page headline. Leave empty for the default look."
+            hint="Recommended: wide landscape, ~1600×600px (3:1). Sits behind the home-page headline; leave empty for the default look."
             currentUrl={tenant.banner_url}
             onChanged={reload}
           />

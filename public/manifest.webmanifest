@@ -1,0 +1,14 @@
+{
+  "name": "Riverbend Farmers Market",
+  "short_name": "Riverbend",
+  "description": "Vendor portal and market info for Riverbend Farmers Market.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf7f0",
+  "theme_color": "#2f5d3a",
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
+  ]
+}

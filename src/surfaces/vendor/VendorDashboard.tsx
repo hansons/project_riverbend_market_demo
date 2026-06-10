@@ -1,6 +1,7 @@
 import { fetchFees, fetchMarketDates, fetchMessages, fetchMySchedule, fetchOfferings } from '@/lib/vendorData';
 import { useAsync } from '@/lib/useAsync';
 import { formatDate, formatMoney } from '@/lib/format';
+import { VendorNotifyCard } from './VendorNotifyCard';
 import type { Vendor } from '@/lib/types';
 import type { VendorSection } from './VendorShell';
 
@@ -109,6 +110,8 @@ export function VendorDashboard({ vendor, onGo }: { vendor: Vendor; onGo: (s: Ve
           )}
         </Card>
       </div>
+
+      <VendorNotifyCard vendor={vendor} />
     </div>
   );
 }

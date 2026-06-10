@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Riverbend Farmers Market">
+  <rect width="512" height="512" fill="#2f5d3a"/>
+  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 372 V236"/>
+    <path d="M256 272 C 256 212, 302 176, 360 176 C 360 236, 314 272, 256 272 Z"/>
+    <path d="M256 308 C 256 254, 214 222, 160 222 C 160 276, 202 308, 256 308 Z"/>
+  </g>
+</svg>

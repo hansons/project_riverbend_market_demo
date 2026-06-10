@@ -14,3 +14,12 @@ createRoot(document.getElementById('root')!).render(
     </ThemeProvider>
   </StrictMode>,
 );
+
+// Register the service worker for Web Push (no-op if unsupported).
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* SW registration failed — push just stays unavailable */
+    });
+  });
+}

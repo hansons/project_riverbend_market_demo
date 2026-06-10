@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { fetchAllVendors, setVendorStatus } from '@/lib/adminData';
 import { useAsync } from '@/lib/useAsync';
 import { useHotkey } from '@/lib/useKeyNav';
+import { notifyVendorApproved } from '@/lib/push';
 import { categoryEmoji, vendorStatusStyle } from '@/lib/format';
 import type { VendorStatus } from '@/lib/types';
 
@@ -31,6 +32,7 @@ export function AdminVendors() {
   async function setStatus(id: string, status: VendorStatus) {
     setBusy(id);
     await setVendorStatus(id, status);
+    if (status === 'active') void notifyVendorApproved(id); // best-effort push, never blocks
     setBusy(null);
     reload();
   }

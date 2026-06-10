@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTheme } from '@/theme/ThemeProvider';
 import { resetDemo } from '@/lib/platform';
+import { ThemePicker } from '@/components/ThemePicker';
 import type { Brand, Tenant } from '@/lib/types';
 
 type Section = 'branding' | 'reset' | 'about';
@@ -68,7 +69,18 @@ function Branding() {
           <BrandCard key={t.id} t={t} active={t.slug === tenant.slug} onApply={() => preview(t)} />
         ))}
       </div>
-      <button className="btn-ghost -ml-3" onClick={() => reload()}>↺ Reset to default</button>
+      <button className="btn-ghost -ml-3" onClick={() => reload()}>↺ Reset preview to live</button>
+
+      <div className="border-t border-brand-line pt-5">
+        <h3 className="text-lg">Palettes</h3>
+        <p className="mt-1 text-sm text-brand-muted">
+          Apply a palette to the <strong>live</strong> market — this one persists for everyone (the
+          Market Admin can do this too, from their Appearance tab).
+        </p>
+        <div className="mt-3">
+          <ThemePicker />
+        </div>
+      </div>
     </div>
   );
 }

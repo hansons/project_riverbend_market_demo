@@ -28,6 +28,13 @@ export interface Tenant {
   is_active: boolean;
 }
 
+export interface Theme {
+  id: string;
+  name: string;
+  brand: Partial<Brand>;
+  sort: number;
+}
+
 export interface Profile {
   id: string;
   email: string;

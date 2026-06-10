@@ -7,6 +7,7 @@ import { AdminVendors } from './AdminVendors';
 import { AdminCategories } from './AdminCategories';
 import { AdminStalls } from './AdminStalls';
 import { AdminAnnouncements } from './AdminAnnouncements';
+import { AdminAppearance } from './AdminAppearance';
 import { AdminReports } from './AdminReports';
 
 export type AdminSection =
@@ -16,6 +17,7 @@ export type AdminSection =
   | 'categories'
   | 'stalls'
   | 'announcements'
+  | 'appearance'
   | 'reports';
 
 const SECTIONS: { key: AdminSection; label: string; icon: string }[] = [
@@ -25,6 +27,7 @@ const SECTIONS: { key: AdminSection; label: string; icon: string }[] = [
   { key: 'categories', label: 'Categories', icon: '🏷️' },
   { key: 'stalls', label: 'Stall Map', icon: '🗺️' },
   { key: 'announcements', label: 'Announcements', icon: '📣' },
+  { key: 'appearance', label: 'Appearance', icon: '🎨' },
   { key: 'reports', label: 'Reports', icon: '📊' },
 ];
 
@@ -69,6 +72,7 @@ export function AdminShell() {
           {section === 'categories' && <AdminCategories />}
           {section === 'stalls' && <AdminStalls />}
           {section === 'announcements' && <AdminAnnouncements />}
+          {section === 'appearance' && <AdminAppearance />}
           {section === 'reports' && <AdminReports />}
         </div>
       </div>

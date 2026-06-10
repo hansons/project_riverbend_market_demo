@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import type { Tenant } from '@/lib/types';
+import type { Brand, Tenant, Theme } from '@/lib/types';
 
 // Riverbend brand, also used as the offline fallback so the app is themed even
 // before Supabase is connected. Mirrors the active tenant row in seed.sql.
@@ -38,6 +38,20 @@ export async function fetchTenants(): Promise<Tenant[]> {
   if (!isSupabaseConfigured) return [FALLBACK_TENANT];
   const { data } = await supabase.from('tenants').select('*').order('created_at');
   return (data as Tenant[] | null)?.length ? (data as Tenant[]) : [FALLBACK_TENANT];
+}
+
+/** Brand theme presets the admin/owner can apply. */
+export async function fetchThemes(): Promise<Theme[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data } = await supabase.from('themes').select('*').order('sort');
+  return (data as Theme[]) ?? [];
+}
+
+/** Persist a theme's palette onto the active market (admin+; enforced by RLS). */
+export async function applyThemeToActive(brand: Partial<Brand>): Promise<string | null> {
+  if (!isSupabaseConfigured) return 'Supabase not configured';
+  const { error } = await supabase.from('tenants').update({ brand }).eq('is_active', true);
+  return error?.message ?? null;
 }
 
 /** Promote one tenant to active (super-admin only; enforced by RLS). */

@@ -1,12 +1,17 @@
-import { fetchVendors, fetchMarkets, fetchCurrentOfferings } from '@/lib/data';
+import { fetchVendors, fetchMarkets, fetchCurrentOfferings, fetchUpcomingEvents } from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
 import { useTheme } from '@/theme/ThemeProvider';
 import { navigate } from '@/lib/router';
-import { formatDate, thisSaturdayISO } from '@/lib/format';
+import { eventCategoryEmoji, formatDate, thisSaturdayISO } from '@/lib/format';
 import { pickWeeklyFeatured } from '@/lib/featured';
 import { SeasonStrip } from './SeasonStrip';
 import { VendorCard } from './VendorCard';
-import type { Vendor, VendorOffering } from '@/lib/types';
+import type { MarketEvent, Vendor, VendorOffering } from '@/lib/types';
+
+function todayISO(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
 
 const VALUE_PROPS = [
   { icon: '🌎', title: 'Grown nearby', body: 'Everything here is raised or made within an hour’s drive.' },
@@ -20,7 +25,9 @@ export function PublicHome() {
   const { data: markets } = useAsync(fetchMarkets, [], []);
   const reference = thisSaturdayISO();
   const { data: fresh } = useAsync(() => fetchCurrentOfferings(reference), [], []);
+  const { data: events } = useAsync<MarketEvent[]>(() => fetchUpcomingEvents(todayISO()), [], []);
   const featured = pickWeeklyFeatured(vendors.filter((v) => v.featured));
+  const upcomingEvents = events.slice(0, 3);
   const nextMarket = markets[0];
 
   type FreshItem = { o: VendorOffering; vendor: Vendor };
@@ -129,6 +136,39 @@ export function PublicHome() {
             {featured.map((v) => (
               <VendorCard key={v.id} vendor={v} />
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Upcoming events teaser → full Events page */}
+      {upcomingEvents.length > 0 && (
+        <section className="bg-brand-card">
+          <div className="mx-auto max-w-content px-4 py-12">
+            <div className="mb-5 flex items-end justify-between">
+              <div>
+                <p className="eyebrow">Learning takes root</p>
+                <h2 className="text-2xl">Upcoming events</h2>
+              </div>
+              <button onClick={() => navigate('/events')} className="btn-ghost">All events →</button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {upcomingEvents.map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => navigate('/events')}
+                  className="card p-4 text-left transition hover:shadow-lift"
+                >
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold text-brand-accent">{formatDate(e.date)}</span>
+                    <span className="chip">
+                      {eventCategoryEmoji(e.category)} {e.category ?? 'Event'}
+                    </span>
+                  </div>
+                  <p className="mt-2 font-semibold text-brand-primary-dark">{e.title}</p>
+                  {e.description && <p className="mt-1 line-clamp-2 text-sm text-brand-muted">{e.description}</p>}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
       )}

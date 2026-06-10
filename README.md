@@ -33,11 +33,12 @@ deploys static to Cloudflare Pages. Forked from the Sparrow staff-portal pattern
 - ✅ **Slice 1** — public/shopper surface + market seed data
 - ✅ **Slice 2** — vendor portal (profile, weekly offerings, schedule, fees, messages) + vendor RLS
 - ✅ **Slice 3** — admin portal (applications, vendors, stall assignment, announcements, reports) + public "Sell with us" form + announcement banner + admin RLS
-- ⬜ **Slice 4** — platform view + live re-skin
+- ✅ **Slice 4** — Platform Owner: live re-skin (session-local), Reset-demo button, "what you'd own" panel
 - ⬜ **Slice 5** — polish + deploy
 
-Until Slice 4 lands, the Platform Owner persona shows a placeholder that still proves
-the authenticated, RLS-gated session works.
+Also built along the way: managed product categories (vendor request → admin approval),
+vendor photo uploads (browser resize → WebP → Supabase Storage), and an auto-rotating
+"Fresh this Saturday" feed.
 
 ---
 
@@ -60,10 +61,10 @@ Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (the anon key is browse
 RLS gates everything).
 
 ### 4. Schema + data
-In the Supabase **SQL editor** (or `supabase db push`), run in order:
-1. `supabase/migrations/0001_init.sql`
-2. `supabase/migrations/0002_market.sql`
-3. `supabase/seed.sql`
+In the Supabase **SQL editor** (or `supabase db push`), run **every file in
+`supabase/migrations/` in order** (`0001` → `0007`), then `supabase/seed.sql`.
+(`0006` sets up the photo-upload Storage bucket; `0007` defines the demo loader that
+`seed.sql` and the Platform Owner's "Reset demo" button both call.)
 
 ### 5. Demo personas (one-click logins)
 This creates the four demo accounts and elevates their roles. It needs the

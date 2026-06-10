@@ -1,9 +1,9 @@
 import { useAuth } from '@/auth/AuthContext';
 import { DemoBar } from '@/components/DemoBar';
-import { SurfacePlaceholder } from '@/components/SurfacePlaceholder';
 import { PublicShell } from '@/surfaces/public/PublicShell';
 import { VendorShell } from '@/surfaces/vendor/VendorShell';
 import { AdminShell } from '@/surfaces/admin/AdminShell';
+import { PlatformShell } from '@/surfaces/platform/PlatformShell';
 
 export function App() {
   const { profile, loading } = useAuth();
@@ -24,7 +24,7 @@ export function App() {
         ) : role === 'admin' ? (
           <AdminShell />
         ) : (
-          <SurfacePlaceholder surface="owner" />
+          <PlatformShell />
         )}
       </main>
     </div>

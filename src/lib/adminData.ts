@@ -138,6 +138,15 @@ export async function setAnnouncementActive(id: string, active: boolean): Promis
   return error?.message ?? null;
 }
 
+/** Bulk add announcements from a CSV import. */
+export async function addAnnouncementsBulk(
+  rows: { title: string; body: string; audience: AnnouncementAudience; active: boolean }[],
+): Promise<string | null> {
+  if (!rows.length) return null;
+  const { error } = await supabase.from('announcements').insert(rows);
+  return error?.message ?? null;
+}
+
 // ── Product categories ──
 export async function fetchAllCategories(): Promise<ProductCategory[]> {
   const { data } = await supabase.from('product_categories').select('*').order('name');

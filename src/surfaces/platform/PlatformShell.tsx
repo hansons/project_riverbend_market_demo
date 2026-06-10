@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useKeyNav } from '@/lib/useKeyNav';
 import { resetDemo } from '@/lib/platform';
 import { ThemePicker } from '@/components/ThemePicker';
 import type { Brand, Tenant } from '@/lib/types';
@@ -14,6 +15,16 @@ const SECTIONS: { key: Section; label: string; icon: string }[] = [
 export function PlatformShell() {
   const { tenant } = useTheme();
   const [section, setSection] = useState<Section>('branding');
+
+  // W/S (and ↑/↓) move between the left-rail sections.
+  const sectionIdx = SECTIONS.findIndex((s) => s.key === section);
+  useKeyNav({
+    length: SECTIONS.length,
+    index: sectionIdx,
+    onIndex: (i) => setSection(SECTIONS[i].key),
+    prevKeys: ['w', 'arrowup'],
+    nextKeys: ['s', 'arrowdown'],
+  });
 
   return (
     <div className="mx-auto max-w-content px-4 py-6">

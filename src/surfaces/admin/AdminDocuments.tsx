@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchAllDocuments, signedDocUrl, unverifyDocument, verifyDocument } from '@/lib/documents';
 import { useAsync } from '@/lib/useAsync';
+import { useHotkey } from '@/lib/useKeyNav';
 import { docStatusStyle, formatDate, relativeDays } from '@/lib/format';
 import type { VendorDocumentStatus } from '@/lib/types';
 
@@ -14,6 +15,8 @@ export function AdminDocuments() {
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  useHotkey(['/'], () => searchRef.current?.focus()); // "/" jumps to search
 
   const soon = docs
     .filter((d) => d.status === 'expired' || d.expiring_soon)
@@ -92,7 +95,7 @@ export function AdminDocuments() {
               </button>
             ))}
           </div>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vendor or doc…" className="field-input sm:w-60" />
+          <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vendor or doc… ( / )" className="field-input sm:w-60" />
         </div>
 
         {loading ? (

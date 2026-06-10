@@ -7,7 +7,7 @@ import { navigate } from '@/lib/router';
 // The persistent "this is a Lodestone demo" bar with the one-click persona
 // switcher. Switching personas signs into a real seeded account, so the surface
 // that renders below is gated by genuine Row-Level Security.
-export function DemoBar({ onAbout }: { onAbout: () => void }) {
+export function DemoBar({ onAbout, onShortcuts }: { onAbout: () => void; onShortcuts: () => void }) {
   const { profile } = useAuth();
   const active = personaForRole(profile?.role);
   const [busy, setBusy] = useState<string | null>(null);
@@ -40,6 +40,13 @@ export function DemoBar({ onAbout }: { onAbout: () => void }) {
             className="grid h-5 w-5 place-items-center rounded-full bg-white/10 text-xs hover:bg-white/20"
           >
             ⓘ
+          </button>
+          <button
+            onClick={onShortcuts}
+            title="Keyboard shortcuts (?)"
+            className="grid h-5 w-5 place-items-center rounded-full bg-white/10 text-xs hover:bg-white/20"
+          >
+            ⌨
           </button>
         </div>
 

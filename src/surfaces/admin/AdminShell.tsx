@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useKeyNav } from '@/lib/useKeyNav';
 import { AdminDashboard } from './AdminDashboard';
 import { AdminApplications } from './AdminApplications';
 import { AdminVendors } from './AdminVendors';
@@ -50,6 +51,16 @@ export function AdminShell() {
   const { profile } = useAuth();
   const { tenant } = useTheme();
   const [section, setSection] = useState<AdminSection>('dashboard');
+
+  // W/S (and ↑/↓) move between the left-rail sections.
+  const sectionIdx = SECTIONS.findIndex((s) => s.key === section);
+  useKeyNav({
+    length: SECTIONS.length,
+    index: sectionIdx,
+    onIndex: (i) => setSection(SECTIONS[i].key),
+    prevKeys: ['w', 'arrowup'],
+    nextKeys: ['s', 'arrowdown'],
+  });
 
   return (
     <div className="mx-auto max-w-content px-4 py-6">

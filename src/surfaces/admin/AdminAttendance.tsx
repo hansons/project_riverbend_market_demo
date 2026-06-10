@@ -10,6 +10,7 @@ import {
   recordAttendance,
 } from '@/lib/attendance';
 import { useAsync } from '@/lib/useAsync';
+import { useKeyNav } from '@/lib/useKeyNav';
 import { formatDate, formatMoney } from '@/lib/format';
 import { downloadCSV, toCSV } from '@/lib/csv';
 
@@ -38,6 +39,20 @@ export function AdminAttendance() {
   const defaultId =
     (dates.filter((d) => d.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0] ?? dates[0])?.id ?? '';
   const selectedId = dateId || defaultId;
+  const dayIdx = dates.findIndex((d) => d.id === selectedId);
+  function stepDay(delta: number) {
+    const base = dayIdx < 0 ? 0 : dayIdx;
+    const ni = base + delta;
+    if (ni >= 0 && ni < dates.length) setDateId(dates[ni].id);
+  }
+  // A/D (and ←/→) step between market days.
+  useKeyNav({
+    length: dates.length,
+    index: dayIdx,
+    onIndex: (i) => setDateId(dates[i].id),
+    prevKeys: ['a', 'arrowleft'],
+    nextKeys: ['d', 'arrowright'],
+  });
   const target = dates.find((d) => d.id === selectedId) ?? null;
 
   const existing = target ? history.find((h) => h.market_id === target.market_id && h.market_date === target.date) : null;
@@ -96,17 +111,40 @@ export function AdminAttendance() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl">Attendance</h2>
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-brand-muted">Market day</span>
-          <select className="field-input" value={selectedId} onChange={(e) => setDateId(e.target.value)}>
-            {dates.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.markets?.name ? `${d.markets.name} · ` : ''}
-                {formatDate(d.date)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div>
+          <span className="field-label">Market day</span>
+          <div className="mt-1 flex items-stretch gap-1">
+            <button
+              type="button"
+              className="btn-outline px-2.5 disabled:opacity-40"
+              onClick={() => stepDay(-1)}
+              disabled={dayIdx <= 0}
+              title="Previous market day (A)"
+              aria-label="Previous market day"
+            >
+              ◀
+            </button>
+            <select className="field-input" value={selectedId} onChange={(e) => setDateId(e.target.value)}>
+              {dates.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.markets?.name ? `${d.markets.name} · ` : ''}
+                  {formatDate(d.date)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn-outline px-2.5 disabled:opacity-40"
+              onClick={() => stepDay(1)}
+              disabled={dayIdx < 0 || dayIdx >= dates.length - 1}
+              title="Next market day (D)"
+              aria-label="Next market day"
+            >
+              ▶
+            </button>
+          </div>
+          <p className="mt-1 text-[11px] text-brand-muted">Keys: A ◀ · D ▶</p>
+        </div>
       </div>
 
       {/* Forecast */}

@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { fetchAllVendors, setVendorStatus } from '@/lib/adminData';
 import { useAsync } from '@/lib/useAsync';
+import { useHotkey } from '@/lib/useKeyNav';
 import { categoryEmoji, vendorStatusStyle } from '@/lib/format';
 import type { VendorStatus } from '@/lib/types';
 
@@ -11,6 +12,8 @@ export function AdminVendors() {
   const [filter, setFilter] = useState<VendorStatus | 'all'>('all');
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  useHotkey(['/'], () => searchRef.current?.focus()); // "/" jumps to search
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: vendors.length };
@@ -52,7 +55,7 @@ export function AdminVendors() {
             </button>
           ))}
         </div>
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…" className="field-input sm:w-52" />
+        <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search… ( / )" className="field-input sm:w-52" />
       </div>
 
       {loading ? (

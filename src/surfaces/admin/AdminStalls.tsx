@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { fetchMarketDates } from '@/lib/vendorData';
+import { useKeyNav } from '@/lib/useKeyNav';
 import {
   fetchScheduleForDate,
   fetchAllVendors,
@@ -79,13 +80,40 @@ export function AdminStalls() {
   const balanceSuggestions = addable.filter((v) => gapCats.includes(v.category));
   const otherAddable = addable.filter((v) => !gapCats.includes(v.category));
 
-  // Previous date of the same market, for "Copy last market".
+  // Previous date of the same market, for "Copy last week" (the prior occurrence
+  // of this market — i.e. last week for a weekly market; may be a past date).
   const current = dates.find((d) => d.id === dateId);
   const prev = current
     ? dates
         .filter((d) => d.market_id === current.market_id && d.date < current.date)
         .sort((a, b) => b.date.localeCompare(a.date))[0]
     : undefined;
+
+  // Week navigation: ◀ A / D ▶ step through upcoming market days so the operator
+  // can copy-last-week → tweak → advance, building out the calendar quickly.
+  const curIdx = upcomingDates.findIndex((d) => d.id === dateId);
+  const canPrev = curIdx > 0;
+  const canNext = curIdx >= 0 && curIdx < upcomingDates.length - 1;
+
+  function goToDate(id: string) {
+    setPicked(id);
+    setSelectedVendorId(null);
+    setHint(null);
+  }
+  function stepWeek(delta: number) {
+    const base = curIdx < 0 ? 0 : curIdx;
+    const ni = base + delta;
+    if (ni >= 0 && ni < upcomingDates.length) goToDate(upcomingDates[ni].id);
+  }
+
+  // A/D (and ←/→) step between upcoming market days.
+  useKeyNav({
+    length: upcomingDates.length,
+    index: curIdx,
+    onIndex: (i) => goToDate(upcomingDates[i].id),
+    prevKeys: ['a', 'arrowleft'],
+    nextKeys: ['d', 'arrowright'],
+  });
 
   async function run(fn: () => Promise<string | null>) {
     setBusy(true);
@@ -184,16 +212,39 @@ export function AdminStalls() {
           </p>
         </div>
         <div className="flex items-end gap-3">
-          <label className="block">
+          <div>
             <span className="field-label">Market day</span>
-            <select className="field-input" value={dateId} onChange={(e) => setPicked(e.target.value)}>
-              {upcomingDates.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.markets?.name} · {formatDate(d.date)}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className="mt-1 flex items-stretch gap-1">
+              <button
+                type="button"
+                className="btn-outline px-2.5 disabled:opacity-40"
+                onClick={() => stepWeek(-1)}
+                disabled={!canPrev}
+                title="Previous market day (A)"
+                aria-label="Previous market day"
+              >
+                ◀
+              </button>
+              <select className="field-input" value={dateId} onChange={(e) => goToDate(e.target.value)}>
+                {upcomingDates.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.markets?.name} · {formatDate(d.date)}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn-outline px-2.5 disabled:opacity-40"
+                onClick={() => stepWeek(1)}
+                disabled={!canNext}
+                title="Next market day (D)"
+                aria-label="Next market day"
+              >
+                ▶
+              </button>
+            </div>
+            <p className="mt-1 text-[11px] text-brand-muted">Keys: A ◀ prev · D ▶ next</p>
+          </div>
           <CsvToolbar
             onSample={() => downloadCSV('stall-assignments-sample.csv', toCSV(CSV_SAMPLE))}
             onExport={exportSeason}
@@ -207,9 +258,9 @@ export function AdminStalls() {
           className="btn-outline px-3 py-1.5 text-sm disabled:opacity-50"
           onClick={copyLast}
           disabled={busy || !prev}
-          title={prev ? '' : 'No earlier date for this market'}
+          title={prev ? `Copy this market's previous week (${formatDate(prev.date)})` : 'No earlier date for this market'}
         >
-          ↺ {prev ? `Copy ${prev.markets?.name} · ${formatDate(prev.date)}` : 'No previous market to copy'}
+          ↺ {prev ? `Copy last week · ${formatDate(prev.date)}` : 'No previous week to copy'}
         </button>
         <span className="chip">{confirmed.length} vendors</span>
         <span className="chip">{filledCells} stalls filled</span>

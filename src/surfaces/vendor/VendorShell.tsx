@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { useAsync } from '@/lib/useAsync';
+import { useKeyNav } from '@/lib/useKeyNav';
 import { fetchVendorById } from '@/lib/vendorData';
 import { VendorDashboard } from './VendorDashboard';
 import { VendorProfile } from './VendorProfile';
@@ -44,6 +45,17 @@ export function VendorShell() {
     null,
   );
   const [section, setSection] = useState<VendorSection>('dashboard');
+
+  // W/S (and ↑/↓) move between the left-rail sections.
+  const sectionIdx = SECTIONS.findIndex((s) => s.key === section);
+  useKeyNav({
+    length: SECTIONS.length,
+    index: sectionIdx,
+    onIndex: (i) => setSection(SECTIONS[i].key),
+    prevKeys: ['w', 'arrowup'],
+    nextKeys: ['s', 'arrowdown'],
+    enabled: !!vendor,
+  });
 
   if (!vendorId) {
     return (

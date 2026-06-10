@@ -10,6 +10,7 @@ import {
 import { fetchAllVendors } from '@/lib/adminData';
 import { fetchMarketDates } from '@/lib/vendorData';
 import { useAsync } from '@/lib/useAsync';
+import { useKeyNav } from '@/lib/useKeyNav';
 import { CURRENCY_LABEL, formatDate, formatMoney } from '@/lib/format';
 import { TokenQuickEntry } from '../vendor/TokenQuickEntry';
 import type { MarketDate } from '@/lib/types';
@@ -34,6 +35,20 @@ export function AdminTokens() {
 
   const [day, setDay] = useState('');
   const dayValue = day || defaultDay(dates);
+  const dayIdx = dates.findIndex((d) => d.date === dayValue);
+  function stepDay(delta: number) {
+    const base = dayIdx < 0 ? 0 : dayIdx;
+    const ni = base + delta;
+    if (ni >= 0 && ni < dates.length) setDay(dates[ni].date);
+  }
+  // A/D (and ←/→) step between market days.
+  useKeyNav({
+    length: dates.length,
+    index: dayIdx,
+    onIndex: (i) => setDay(dates[i].date),
+    prevKeys: ['a', 'arrowleft'],
+    nextKeys: ['d', 'arrowright'],
+  });
   const [vendorId, setVendorId] = useState('');
   const activeVendors = vendors.filter((v) => v.status === 'active');
   const vendorValue = vendorId || activeVendors[0]?.id || '';
@@ -85,17 +100,40 @@ export function AdminTokens() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl">Token reconciliation (SNAP / Double Up)</h2>
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-brand-muted">Market day</span>
-          <select className="field-input" value={dayValue} onChange={(e) => setDay(e.target.value)}>
-            {dates.map((d) => (
-              <option key={d.id} value={d.date}>
-                {d.markets?.name ? `${d.markets.name} · ` : ''}
-                {formatDate(d.date)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div>
+          <span className="field-label">Market day</span>
+          <div className="mt-1 flex items-stretch gap-1">
+            <button
+              type="button"
+              className="btn-outline px-2.5 disabled:opacity-40"
+              onClick={() => stepDay(-1)}
+              disabled={dayIdx <= 0}
+              title="Previous market day (A)"
+              aria-label="Previous market day"
+            >
+              ◀
+            </button>
+            <select className="field-input" value={dayValue} onChange={(e) => setDay(e.target.value)}>
+              {dates.map((d) => (
+                <option key={d.id} value={d.date}>
+                  {d.markets?.name ? `${d.markets.name} · ` : ''}
+                  {formatDate(d.date)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn-outline px-2.5 disabled:opacity-40"
+              onClick={() => stepDay(1)}
+              disabled={dayIdx < 0 || dayIdx >= dates.length - 1}
+              title="Next market day (D)"
+              aria-label="Next market day"
+            >
+              ▶
+            </button>
+          </div>
+          <p className="mt-1 text-[11px] text-brand-muted">Keys: A ◀ · D ▶</p>
+        </div>
       </div>
 
       {/* Reconciliation for the day */}

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { useHotkey } from '@/lib/useKeyNav';
 import { DemoBar } from '@/components/DemoBar';
 import { IntroOverlay } from '@/components/IntroOverlay';
+import { ShortcutsOverlay } from '@/components/ShortcutsOverlay';
 import { PublicShell } from '@/surfaces/public/PublicShell';
 import { VendorShell } from '@/surfaces/vendor/VendorShell';
 import { AdminShell } from '@/surfaces/admin/AdminShell';
@@ -18,6 +20,10 @@ export function App() {
     }
   });
 
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  useHotkey(['?'], () => setShowShortcuts((s) => !s));
+  useHotkey(['escape'], () => setShowShortcuts(false), { allowInInputs: true });
+
   function dismissIntro() {
     setShowIntro(false);
     try {
@@ -30,7 +36,8 @@ export function App() {
   return (
     <div className="flex min-h-screen flex-col">
       <IntroOverlay open={showIntro} onClose={dismissIntro} />
-      <DemoBar onAbout={() => setShowIntro(true)} />
+      <ShortcutsOverlay open={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <DemoBar onAbout={() => setShowIntro(true)} onShortcuts={() => setShowShortcuts(true)} />
       <main className="flex-1">
         {loading ? (
           <div className="grid min-h-[60vh] place-items-center text-brand-muted">

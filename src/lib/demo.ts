@@ -9,6 +9,8 @@ export interface DemoPersona {
   key: 'shopper' | 'vendor' | 'admin' | 'owner';
   role: AppRole;
   label: string;
+  /** Compact label for the demo bar on small screens. */
+  short: string;
   blurb: string;
   /** null = anonymous public shopper (sign out). */
   email: string | null;
@@ -22,6 +24,7 @@ export const PERSONAS: DemoPersona[] = [
     key: 'shopper',
     role: 'shopper',
     label: 'Shopper',
+    short: 'Shopper',
     blurb: 'Browse the public market — no login needed',
     email: null,
     emoji: '🧺',
@@ -30,6 +33,7 @@ export const PERSONAS: DemoPersona[] = [
     key: 'vendor',
     role: 'vendor',
     label: 'Vendor',
+    short: 'Vendor',
     blurb: 'Fern Hollow Farm — manage my stand',
     email: 'vendor@riverbend.demo',
     emoji: '🌾',
@@ -38,6 +42,7 @@ export const PERSONAS: DemoPersona[] = [
     key: 'admin',
     role: 'admin',
     label: 'Market Admin',
+    short: 'Admin',
     blurb: 'Run the market — vendors, stalls, reports',
     email: 'admin@riverbend.demo',
     emoji: '🛠️',
@@ -46,6 +51,7 @@ export const PERSONAS: DemoPersona[] = [
     key: 'owner',
     role: 'superadmin',
     label: 'Platform Owner',
+    short: 'Owner',
     blurb: 'Lodestone view — re-skin & configure',
     email: 'owner@riverbend.demo',
     emoji: '⚙️',

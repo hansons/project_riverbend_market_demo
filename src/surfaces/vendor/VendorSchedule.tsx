@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { fetchMarketDates, fetchMySchedule, setScheduleStatus } from '@/lib/vendorData';
 import { useAsync } from '@/lib/useAsync';
 import { formatDate } from '@/lib/format';
+import { MarketMap } from '@/components/MarketMap';
 import type { ScheduleStatus, Vendor } from '@/lib/types';
+
+function todayISO(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
 
 const STATUS_PILL: Record<ScheduleStatus | 'none', { label: string; className: string }> = {
   confirmed: { label: 'Confirmed', className: 'bg-status-ok/10 text-status-ok' },
@@ -27,12 +33,29 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
 
   const loading = datesLoading || schedLoading;
 
+  const today = todayISO();
+  const myStops = sched
+    .filter((s) => s.status === 'confirmed' && s.stall && /^[A-D]\d+$/.test(s.stall))
+    .map((s) => ({ s, d: dates.find((x) => x.id === s.market_date_id) }))
+    .filter((x) => x.d && x.d.date >= today)
+    .sort((a, b) => a.d!.date.localeCompare(b.d!.date));
+  const myNext = myStops[0];
+
   return (
     <div className="card p-6">
       <h2 className="text-xl">Market schedule</h2>
       <p className="mt-1 text-sm text-brand-muted">
         Confirm or decline each upcoming date. Your stall assignment is set by market staff.
       </p>
+
+      {myNext && (
+        <div className="mt-4">
+          <MarketMap
+            highlight={myNext.s.stall}
+            highlightText={`You · ${myNext.d!.markets?.name ?? ''} ${formatDate(myNext.d!.date)}`}
+          />
+        </div>
+      )}
 
       {loading ? (
         <div className="mt-5 h-40 animate-pulse rounded-xl bg-brand-paper" />

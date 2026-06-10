@@ -20,6 +20,39 @@ export async function fetchMarkets(): Promise<Market[]> {
   return (data as Market[]) ?? [];
 }
 
+// ─── Market map: public stall assignments (confirmed, active vendors) ───
+export interface StallAssignment {
+  stall: string;
+  vendor: string;
+  slug: string;
+}
+
+/** Confirmed stall assignments for a given market date (public-readable). */
+export async function fetchAssignmentsForDate(marketDateId: string): Promise<StallAssignment[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data } = await supabase
+    .from('vendor_schedule')
+    .select('stall, vendors(name, slug, status)')
+    .eq('market_date_id', marketDateId)
+    .eq('status', 'confirmed');
+  const rows = (data as unknown as { stall: string | null; vendors: { name: string; slug: string; status: string } | null }[]) ?? [];
+  return rows
+    .filter((r) => r.stall && r.vendors && r.vendors.status === 'active')
+    .map((r) => ({ stall: r.stall as string, vendor: r.vendors!.name, slug: r.vendors!.slug }));
+}
+
+/** A vendor's own confirmed stall assignments (market_date_id + stall). */
+export async function fetchVendorConfirmed(vendorId: string): Promise<{ market_date_id: string; stall: string }[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data } = await supabase
+    .from('vendor_schedule')
+    .select('market_date_id, stall')
+    .eq('vendor_id', vendorId)
+    .eq('status', 'confirmed')
+    .not('stall', 'is', null);
+  return (data as { market_date_id: string; stall: string }[]) ?? [];
+}
+
 /** Upcoming community events (on/after `fromISO`), with their market joined. */
 export async function fetchUpcomingEvents(fromISO: string): Promise<MarketEvent[]> {
   if (!isSupabaseConfigured) return [];

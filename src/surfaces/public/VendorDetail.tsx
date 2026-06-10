@@ -1,9 +1,30 @@
-import { fetchVendorBySlug, fetchVendorProducts, fetchVendorOfferings, pickCurrentOffering } from '@/lib/data';
+import {
+  fetchVendorBySlug,
+  fetchVendorProducts,
+  fetchVendorOfferings,
+  pickCurrentOffering,
+  fetchVendorConfirmed,
+  fetchAssignmentsForDate,
+} from '@/lib/data';
+import { fetchMarketDates } from '@/lib/vendorData';
 import { useAsync } from '@/lib/useAsync';
 import { navigate } from '@/lib/router';
 import { categoryEmoji, formatDate, formatPrice, thisSaturdayISO } from '@/lib/format';
 import { VendorImage } from './VendorImage';
+import { MarketMap } from '@/components/MarketMap';
 import type { Vendor } from '@/lib/types';
+
+function todayISO(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
+
+type MapData = {
+  stall: string;
+  date: string;
+  market: string;
+  occupied: Record<string, { name: string; slug?: string }>;
+};
 
 export function VendorDetail({ slug }: { slug: string }) {
   const { data: vendor, loading } = useAsync<Vendor | null>(
@@ -22,6 +43,25 @@ export function VendorDetail({ slug }: { slug: string }) {
     [],
   );
   const current = pickCurrentOffering(offerings, thisSaturdayISO());
+  const { data: mapData } = useAsync<MapData | null>(
+    async () => {
+      if (!vendor) return null;
+      const [confirmed, dates] = await Promise.all([fetchVendorConfirmed(vendor.id), fetchMarketDates()]);
+      const today = todayISO();
+      const stops = confirmed
+        .filter((c) => /^[A-D]\d+$/.test(c.stall))
+        .map((c) => ({ ...c, d: dates.find((x) => x.id === c.market_date_id) }))
+        .filter((x) => x.d && x.d.date >= today)
+        .sort((a, b) => a.d!.date.localeCompare(b.d!.date));
+      const next = stops[0];
+      if (!next) return null;
+      const assignments = await fetchAssignmentsForDate(next.market_date_id);
+      const occupied = Object.fromEntries(assignments.map((a) => [a.stall, { name: a.vendor, slug: a.slug }]));
+      return { stall: next.stall, date: next.d!.date, market: next.d!.markets?.name ?? 'Market', occupied };
+    },
+    [vendor?.id],
+    null,
+  );
 
   if (loading) {
     return <div className="mx-auto max-w-content px-4 py-12">
@@ -157,6 +197,18 @@ export function VendorDetail({ slug }: { slug: string }) {
           </div>
         </div>
       </div>
+
+      {mapData && (
+        <div className="mt-8">
+          <h2 className="text-xl">Find {vendor.name} at the market</h2>
+          <p className="mt-1 text-sm text-brand-muted">
+            Stall {mapData.stall} · {mapData.market} · {formatDate(mapData.date)}
+          </p>
+          <div className="mt-3">
+            <MarketMap occupied={mapData.occupied} highlight={mapData.stall} highlightText={vendor.name} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

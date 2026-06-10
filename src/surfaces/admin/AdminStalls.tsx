@@ -3,6 +3,7 @@ import { fetchMarketDates } from '@/lib/vendorData';
 import { fetchScheduleForDate, setStall } from '@/lib/adminData';
 import { useAsync } from '@/lib/useAsync';
 import { formatDate } from '@/lib/format';
+import { MarketMap } from '@/components/MarketMap';
 
 export function AdminStalls() {
   const { data: dates } = useAsync(fetchMarketDates, [], []);
@@ -19,6 +20,11 @@ export function AdminStalls() {
   const confirmed = rows.filter((r) => r.status === 'confirmed');
   const others = rows.filter((r) => r.status !== 'confirmed');
   const unassigned = confirmed.filter((r) => !(edits[r.id] ?? r.stall)).length;
+  const occupied = Object.fromEntries(
+    confirmed
+      .filter((r) => edits[r.id] ?? r.stall)
+      .map((r) => [(edits[r.id] ?? r.stall) as string, { name: r.vendors?.name ?? 'Vendor' }]),
+  );
 
   async function save(id: string, current: string | null) {
     setBusy(id);
@@ -52,6 +58,16 @@ export function AdminStalls() {
         <span className="chip">{confirmed.length} confirmed</span>
         <span className={`chip ${unassigned ? 'text-brand-berry' : ''}`}>{unassigned} unassigned</span>
       </div>
+
+      {!loading && dateId && (
+        <div className="mt-4">
+          <MarketMap occupied={occupied} />
+          <p className="mt-2 text-xs text-brand-muted">
+            Dashed cells are open spots that still need filling. Stalls outside the A–D grid (e.g. the
+            Wednesday lot) show in the list below.
+          </p>
+        </div>
+      )}
 
       {loading ? (
         <div className="mt-5 h-48 animate-pulse rounded-2xl bg-brand-card" />

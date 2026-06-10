@@ -3,6 +3,7 @@ import { useAsync } from '@/lib/useAsync';
 import { useTheme } from '@/theme/ThemeProvider';
 import { navigate } from '@/lib/router';
 import { formatDate, thisSaturdayISO } from '@/lib/format';
+import { pickWeeklyFeatured } from '@/lib/featured';
 import { SeasonStrip } from './SeasonStrip';
 import { VendorCard } from './VendorCard';
 import type { Vendor, VendorOffering } from '@/lib/types';
@@ -19,7 +20,7 @@ export function PublicHome() {
   const { data: markets } = useAsync(fetchMarkets, [], []);
   const reference = thisSaturdayISO();
   const { data: fresh } = useAsync(() => fetchCurrentOfferings(reference), [], []);
-  const featured = vendors.filter((v) => v.featured).slice(0, 3);
+  const featured = pickWeeklyFeatured(vendors.filter((v) => v.featured));
   const nextMarket = markets[0];
 
   type FreshItem = { o: VendorOffering; vendor: Vendor };
@@ -117,8 +118,8 @@ export function PublicHome() {
         <section className="mx-auto max-w-content px-4 py-12">
           <div className="mb-5 flex items-end justify-between">
             <div>
-              <p className="eyebrow">Say hello to</p>
-              <h2 className="text-2xl">Featured vendors</h2>
+              <p className="eyebrow">Spotlight · rotates weekly</p>
+              <h2 className="text-2xl">Featured this week</h2>
             </div>
             <button onClick={() => navigate('/vendors')} className="btn-ghost">
               See all vendors →

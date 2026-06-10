@@ -24,6 +24,11 @@ export async function setVendorStatus(id: string, status: VendorStatus): Promise
   return error?.message ?? null;
 }
 
+export async function setVendorFeatured(id: string, featured: boolean): Promise<string | null> {
+  const { error } = await supabase.from('vendors').update({ featured }).eq('id', id);
+  return error?.message ?? null;
+}
+
 // ── Stall assignment ──
 export async function fetchScheduleForDate(marketDateId: string): Promise<ScheduleWithVendor[]> {
   const { data } = await supabase

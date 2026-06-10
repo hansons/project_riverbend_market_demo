@@ -145,3 +145,33 @@ const EVENT_CATEGORY_EMOJI: Record<string, string> = {
 
 export const eventCategoryEmoji = (category: string | null): string =>
   (category && EVENT_CATEGORY_EMOJI[category]) || '📣';
+
+/** "in 12 days" / "today" / "8 days ago" from an ISO date, parsed locally (no TZ shift). */
+export function relativeDays(iso: string | null): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const target = new Date(y, (m ?? 1) - 1, d ?? 1);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const n = Math.round((target.getTime() - today.getTime()) / 86_400_000);
+  if (n === 0) return 'today';
+  return n > 0 ? `in ${n} day${n === 1 ? '' : 's'}` : `${-n} day${n === -1 ? '' : 's'} ago`;
+}
+
+const DOC_STATUS: Record<string, { label: string; className: string }> = {
+  valid: { label: 'Valid', className: 'bg-status-ok/10 text-status-ok' },
+  expiring: { label: 'Expiring', className: 'bg-status-warn/15 text-brand-berry' },
+  expired: { label: 'Expired', className: 'bg-status-alert/10 text-status-alert' },
+  no_expiry: { label: 'No expiry', className: 'bg-brand-paper text-brand-muted' },
+};
+
+export const docStatusStyle = (status: string) =>
+  DOC_STATUS[status] ?? { label: status, className: 'bg-brand-paper text-brand-muted' };
+
+/** Currency-code → short label (mirrors token_currencies labels for the UI + CSV). */
+export const CURRENCY_LABEL: Record<string, string> = {
+  snap: 'SNAP / EBT',
+  dufb: 'Double Up Food Bucks',
+  wic_fmnp: 'WIC / FMNP',
+  market_scrip: 'Market Scrip',
+};

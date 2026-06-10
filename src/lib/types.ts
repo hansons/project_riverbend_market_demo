@@ -201,3 +201,128 @@ export interface ScheduleWithVendor {
   stalls: string[];
   vendors?: { name: string; category: string; status: VendorStatus } | null;
 }
+
+// ─── Vendor compliance documents (0016) ──────────────────────────────
+export type DocStatus = 'valid' | 'expiring' | 'expired' | 'no_expiry';
+
+export interface DocType {
+  code: string;
+  label: string;
+  required: boolean;
+  active: boolean;
+  sort: number;
+}
+
+export interface VendorDocument {
+  id: string;
+  vendor_id: string;
+  doc_type: string;
+  file_url: string | null; // path within the private vendor-documents bucket
+  issued_date: string | null;
+  expires_date: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+/** vendor_documents_status view = VendorDocument + computed fields + joined labels. */
+export interface VendorDocumentStatus extends VendorDocument {
+  doc_label: string;
+  doc_required: boolean;
+  vendor_name: string;
+  vendor_email: string | null;
+  days_until_expiry: number | null;
+  status: DocStatus;
+  due_60: boolean;
+  due_30: boolean;
+  due_7: boolean;
+  expiring_soon: boolean;
+}
+
+// ─── Tokens / EBT (SNAP, Double Up, WIC-FMNP, market scrip) (0018) ───
+export interface TokenCurrency {
+  code: string;
+  label: string;
+  match_of: string | null;
+  active: boolean;
+  sort: number;
+}
+
+export interface TokenIssuance {
+  id: string;
+  market_date: string;
+  currency: string;
+  amount_cents: number;
+  token_count: number;
+  created_at: string;
+}
+
+export interface TokenRedemption {
+  id: string;
+  vendor_id: string;
+  market_date: string;
+  currency: string;
+  amount_cents: number;
+  token_count: number;
+  reimbursed: boolean;
+  reimbursed_at: string | null;
+  recorded_by: string | null;
+  created_at: string;
+  vendors?: { name: string } | null; // joined (admin)
+}
+
+/** token_reconciliation view: issued vs redeemed vs outstanding, per date + currency. */
+export interface TokenReconciliationRow {
+  market_date: string;
+  currency: string;
+  currency_label: string;
+  match_of: string | null;
+  issued_cents: number;
+  redeemed_cents: number;
+  outstanding_cents: number;
+  reimbursed_cents: number;
+  owed_to_vendors_cents: number;
+}
+
+/** report_token_redemptions view: per-redemption detail for the grant CSV. */
+export interface TokenRedemptionReport {
+  id: string;
+  market_date: string;
+  currency: string;
+  currency_label: string;
+  vendor_id: string;
+  vendor_name: string;
+  token_count: number;
+  amount_cents: number;
+  reimbursed: boolean;
+  reimbursed_at: string | null;
+}
+
+// ─── Attendance: actuals + forecast (0020) ──────────────────────────
+export interface MarketDayStat {
+  id: string;
+  market_id: string | null;
+  market_date: string;
+  attendance: number | null;
+  method: string | null;
+  weather: string | null;
+  notes: string | null;
+  recorded_by: string | null;
+  created_at: string;
+}
+
+/** One labeled input to the transparent attendance forecast (shown to the admin). */
+export interface ForecastComponent {
+  label: string;
+  detail: string;
+}
+
+export interface AttendanceForecast {
+  forecast: number | null;
+  low: number | null;
+  high: number | null;
+  basis: number; // # of prior actuals (same market) the estimate rests on
+  confidence: 'low' | 'medium';
+  components: ForecastComponent[];
+}

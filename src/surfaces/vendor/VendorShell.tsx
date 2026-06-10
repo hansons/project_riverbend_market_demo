@@ -8,9 +8,20 @@ import { VendorProducts } from './VendorProducts';
 import { VendorOfferings } from './VendorOfferings';
 import { VendorSchedule } from './VendorSchedule';
 import { VendorFees } from './VendorFees';
+import { VendorDocuments } from './VendorDocuments';
+import { VendorTokens } from './VendorTokens';
 import { VendorMessages } from './VendorMessages';
 
-export type VendorSection = 'dashboard' | 'profile' | 'products' | 'offerings' | 'schedule' | 'fees' | 'messages';
+export type VendorSection =
+  | 'dashboard'
+  | 'profile'
+  | 'products'
+  | 'offerings'
+  | 'schedule'
+  | 'documents'
+  | 'fees'
+  | 'tokens'
+  | 'messages';
 
 const SECTIONS: { key: VendorSection; label: string; icon: string }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
@@ -18,7 +29,9 @@ const SECTIONS: { key: VendorSection; label: string; icon: string }[] = [
   { key: 'products', label: 'Stand List', icon: '🥕' },
   { key: 'offerings', label: 'Weekly Offerings', icon: '🧺' },
   { key: 'schedule', label: 'Schedule', icon: '🗓️' },
+  { key: 'documents', label: 'Documents', icon: '📄' },
   { key: 'fees', label: 'Fees', icon: '💳' },
+  { key: 'tokens', label: 'Token Sales', icon: '🪙' },
   { key: 'messages', label: 'Messages', icon: '✉️' },
 ];
 
@@ -86,7 +99,9 @@ export function VendorShell() {
           {section === 'products' && <VendorProducts vendor={vendor} />}
           {section === 'offerings' && <VendorOfferings vendor={vendor} />}
           {section === 'schedule' && <VendorSchedule vendor={vendor} />}
+          {section === 'documents' && <VendorDocuments vendor={vendor} />}
           {section === 'fees' && <VendorFees vendor={vendor} />}
+          {section === 'tokens' && <VendorTokens vendor={vendor} />}
           {section === 'messages' && <VendorMessages vendor={vendor} />}
         </div>
       </div>

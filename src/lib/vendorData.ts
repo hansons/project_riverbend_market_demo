@@ -52,6 +52,25 @@ export async function uploadVendorImage(
   }
 }
 
+/** Upload a compliance document (PDF/JPEG/PNG) to the PRIVATE bucket; returns the
+ *  storage path (unlike images: no resize/WebP, no upsert, signed URL on read). */
+export async function uploadVendorDocument(
+  vendorId: string,
+  file: File,
+): Promise<{ path: string | null; error: string | null }> {
+  try {
+    const ext = (file.name.split('.').pop() || 'pdf').toLowerCase();
+    const path = `${vendorId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from('vendor-documents')
+      .upload(path, file, { upsert: false, contentType: file.type || 'application/octet-stream' });
+    if (error) return { path: null, error: error.message };
+    return { path, error: null };
+  } catch (e) {
+    return { path: null, error: e instanceof Error ? e.message : 'Upload failed.' };
+  }
+}
+
 // ── Weekly offerings ──
 export async function fetchOfferings(vendorId: string): Promise<VendorOffering[]> {
   const { data } = await supabase

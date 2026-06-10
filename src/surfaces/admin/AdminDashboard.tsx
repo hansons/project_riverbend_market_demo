@@ -1,4 +1,5 @@
 import { fetchAllAnnouncements, fetchAllFees, fetchAllVendors } from '@/lib/adminData';
+import { fetchAllDocuments } from '@/lib/documents';
 import { useAsync } from '@/lib/useAsync';
 import { formatMoney } from '@/lib/format';
 import type { AdminSection } from './AdminShell';
@@ -6,11 +7,16 @@ import type { AdminSection } from './AdminShell';
 export function AdminDashboard({ onGo }: { onGo: (s: AdminSection) => void }) {
   const { data, loading } = useAsync(
     async () => {
-      const [vendors, fees, ann] = await Promise.all([fetchAllVendors(), fetchAllFees(), fetchAllAnnouncements()]);
-      return { vendors, fees, ann };
+      const [vendors, fees, ann, docs] = await Promise.all([
+        fetchAllVendors(),
+        fetchAllFees(),
+        fetchAllAnnouncements(),
+        fetchAllDocuments(),
+      ]);
+      return { vendors, fees, ann, docs };
     },
     [],
-    { vendors: [], fees: [], ann: [] },
+    { vendors: [], fees: [], ann: [], docs: [] },
   );
 
   if (loading) return <div className="h-48 animate-pulse rounded-2xl bg-brand-card" />;
@@ -19,6 +25,7 @@ export function AdminDashboard({ onGo }: { onGo: (s: AdminSection) => void }) {
   const active = data.vendors.filter((v) => v.status === 'active').length;
   const due = data.fees.filter((f) => f.status === 'due').reduce((s, f) => s + f.amount_cents, 0);
   const live = data.ann.filter((a) => a.active).length;
+  const expiringDocs = data.docs.filter((d) => d.status === 'expired' || d.expiring_soon).length;
 
   const Card = ({ title, value, sub, to, cta, accent }: { title: string; value: string; sub: string; to: AdminSection; cta: string; accent?: boolean }) => (
     <button onClick={() => onGo(to)} className="card p-5 text-left transition hover:shadow-lift">
@@ -36,6 +43,7 @@ export function AdminDashboard({ onGo }: { onGo: (s: AdminSection) => void }) {
         <Card title="Applications" value={String(pending)} sub="awaiting review" to="applications" cta="Review" accent={pending > 0} />
         <Card title="Active vendors" value={String(active)} sub="on the roster" to="vendors" cta="Manage" />
         <Card title="Outstanding fees" value={formatMoney(due)} sub="unpaid" to="reports" cta="See reports" accent={due > 0} />
+        <Card title="Expiring docs" value={String(expiringDocs)} sub="next 60 days / lapsed" to="documents" cta="Review" accent={expiringDocs > 0} />
         <Card title="Announcements" value={String(live)} sub="live now" to="announcements" cta="Post" />
       </div>
       <p className="text-sm text-brand-muted">

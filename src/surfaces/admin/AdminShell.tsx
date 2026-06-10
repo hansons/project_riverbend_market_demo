@@ -9,6 +9,9 @@ import { AdminCategories } from './AdminCategories';
 import { AdminStalls } from './AdminStalls';
 import { AdminAnnouncements } from './AdminAnnouncements';
 import { AdminEvents } from './AdminEvents';
+import { AdminDocuments } from './AdminDocuments';
+import { AdminTokens } from './AdminTokens';
+import { AdminAttendance } from './AdminAttendance';
 import { AdminAppearance } from './AdminAppearance';
 import { AdminReports } from './AdminReports';
 
@@ -19,6 +22,9 @@ export type AdminSection =
   | 'featured'
   | 'categories'
   | 'stalls'
+  | 'documents'
+  | 'tokens'
+  | 'attendance'
   | 'announcements'
   | 'events'
   | 'appearance'
@@ -31,6 +37,9 @@ const SECTIONS: { key: AdminSection; label: string; icon: string }[] = [
   { key: 'featured', label: 'Featured', icon: '⭐' },
   { key: 'categories', label: 'Categories', icon: '🏷️' },
   { key: 'stalls', label: 'Stall Map', icon: '🗺️' },
+  { key: 'documents', label: 'Documents', icon: '📄' },
+  { key: 'tokens', label: 'Tokens', icon: '🪙' },
+  { key: 'attendance', label: 'Attendance', icon: '📈' },
   { key: 'announcements', label: 'Announcements', icon: '📣' },
   { key: 'events', label: 'Events', icon: '📅' },
   { key: 'appearance', label: 'Appearance', icon: '🎨' },
@@ -78,6 +87,9 @@ export function AdminShell() {
           {section === 'featured' && <AdminFeatured />}
           {section === 'categories' && <AdminCategories />}
           {section === 'stalls' && <AdminStalls />}
+          {section === 'documents' && <AdminDocuments />}
+          {section === 'tokens' && <AdminTokens />}
+          {section === 'attendance' && <AdminAttendance />}
           {section === 'announcements' && <AdminAnnouncements />}
           {section === 'events' && <AdminEvents />}
           {section === 'appearance' && <AdminAppearance />}

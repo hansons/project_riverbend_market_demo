@@ -64,6 +64,21 @@ export async function replaceProducts(vendorId: string, products: ProductInput[]
   return error?.message ?? null;
 }
 
+export async function addProduct(vendorId: string, p: ProductInput): Promise<string | null> {
+  const { error } = await supabase.from('vendor_products').insert({ vendor_id: vendorId, ...p });
+  return error?.message ?? null;
+}
+
+export async function updateProduct(id: string, patch: Partial<ProductInput>): Promise<string | null> {
+  const { error } = await supabase.from('vendor_products').update(patch).eq('id', id);
+  return error?.message ?? null;
+}
+
+export async function deleteProduct(id: string): Promise<string | null> {
+  const { error } = await supabase.from('vendor_products').delete().eq('id', id);
+  return error?.message ?? null;
+}
+
 // ── Weekly offerings — bulk append from a CSV import ──
 export interface OfferingInput {
   week_of: string;

@@ -1,10 +1,16 @@
 import { useRef, useState } from 'react';
 import { fetchVendorProducts } from '@/lib/data';
-import { replaceProducts, type ProductInput } from '@/lib/vendorData';
+import {
+  addProduct,
+  deleteProduct,
+  replaceProducts,
+  updateProduct,
+  type ProductInput,
+} from '@/lib/vendorData';
 import { useAsync } from '@/lib/useAsync';
 import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
 import { formatPrice } from '@/lib/format';
-import type { Vendor } from '@/lib/types';
+import type { Vendor, VendorProduct } from '@/lib/types';
 
 const HEADER = ['name', 'category', 'unit', 'price', 'in_season', 'sort'];
 const SAMPLE: string[][] = [
@@ -23,11 +29,30 @@ const parsePrice = (s: string): number | null => {
   return Number.isNaN(n) ? null : Math.round(n * 100);
 };
 
+interface EditorValues {
+  name: string;
+  category: string;
+  unit: string;
+  price: string;
+  in_season: boolean;
+}
+const EMPTY: EditorValues = { name: '', category: '', unit: '', price: '', in_season: true };
+
+const toInput = (v: EditorValues, sort: number): ProductInput => ({
+  name: v.name.trim(),
+  category: v.category.trim() || null,
+  unit: v.unit.trim() || null,
+  price_cents: parsePrice(v.price),
+  in_season: v.in_season,
+  sort,
+});
+
 export function VendorProducts({ vendor }: { vendor: Vendor }) {
   const { data: products, loading, reload } = useAsync(() => fetchVendorProducts(vendor.id), [vendor.id], []);
   const [preview, setPreview] = useState<ProductInput[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function exportCurrent() {
@@ -69,7 +94,7 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
     setPreview(parsed);
   }
 
-  async function apply() {
+  async function applyImport() {
     if (!preview) return;
     setBusy(true);
     const err = await replaceProducts(vendor.id, preview);
@@ -81,13 +106,21 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
     }
   }
 
+  async function add(v: EditorValues) {
+    setBusy(true);
+    await addProduct(vendor.id, toInput(v, products.length + 1));
+    setBusy(false);
+    setAdding(false);
+    reload();
+  }
+
   return (
     <div className="space-y-5">
       <div className="card p-6">
         <h2 className="text-xl">Stand list</h2>
         <p className="mt-1 text-sm text-brand-muted">
-          The products & prices shown on your public page. Edit a few here, or update the whole list in a
-          spreadsheet: <strong>export → edit → import</strong>.
+          The products &amp; prices shown on your public page. Edit items below, or update the whole list
+          in a spreadsheet: <strong>export → edit → import</strong>.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button className="btn-outline" onClick={() => downloadCSV('stand-list-sample.csv', toCSV(SAMPLE))}>
@@ -130,7 +163,7 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
             </table>
           </div>
           <div className="mt-4 flex gap-2">
-            <button className="btn-primary" onClick={apply} disabled={busy}>
+            <button className="btn-primary" onClick={applyImport} disabled={busy}>
               {busy ? 'Importing…' : `Replace stand list (${preview.length})`}
             </button>
             <button className="btn-ghost" onClick={() => setPreview(null)} disabled={busy}>Cancel</button>
@@ -139,24 +172,149 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
       )}
 
       <div>
-        <h3 className="text-lg">Current items ({products.length})</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg">Current items ({products.length})</h3>
+          {!adding && (
+            <button className="btn-outline px-3 py-1.5 text-sm" onClick={() => setAdding(true)}>+ Add item</button>
+          )}
+        </div>
+
+        {adding && (
+          <div className="mt-3">
+            <ProductEditor initial={EMPTY} submitLabel="Add item" busy={busy} onSubmit={add} onCancel={() => setAdding(false)} />
+          </div>
+        )}
+
         {loading ? (
           <div className="mt-3 h-32 animate-pulse rounded-2xl bg-brand-card" />
         ) : products.length === 0 ? (
-          <p className="mt-2 text-sm text-brand-muted">No items yet — import a CSV to get started.</p>
+          <p className="mt-2 text-sm text-brand-muted">No items yet — add one above or import a CSV.</p>
         ) : (
-          <div className="card mt-3 divide-y divide-brand-line">
+          <div className="mt-3 space-y-2">
             {products.map((p) => (
-              <div key={p.id} className="flex items-center justify-between p-3 text-sm">
-                <span className={p.in_season ? 'text-brand-ink' : 'text-brand-muted'}>
-                  {p.name}
-                  {!p.in_season && <span className="ml-2 text-xs">(out of season)</span>}
-                </span>
-                <span className="font-medium text-brand-primary-dark">{formatPrice(p.price_cents, p.unit)}</span>
-              </div>
+              <ProductRow key={p.id} product={p} onChanged={reload} />
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ProductRow({ product, onChanged }: { product: VendorProduct; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function save(v: EditorValues) {
+    setBusy(true);
+    await updateProduct(product.id, toInput(v, product.sort));
+    setBusy(false);
+    setEditing(false);
+    onChanged();
+  }
+  async function remove() {
+    if (!window.confirm(`Delete "${product.name}"?`)) return;
+    setBusy(true);
+    await deleteProduct(product.id);
+    setBusy(false);
+    onChanged();
+  }
+
+  if (editing) {
+    return (
+      <ProductEditor
+        initial={{
+          name: product.name,
+          category: product.category ?? '',
+          unit: product.unit ?? '',
+          price: product.price_cents == null ? '' : (product.price_cents / 100).toFixed(2),
+          in_season: product.in_season,
+        }}
+        submitLabel="Save"
+        busy={busy}
+        onSubmit={save}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
+
+  return (
+    <div className="card flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+      <span className={product.in_season ? 'text-brand-ink' : 'text-brand-muted'}>
+        {product.name}
+        {!product.in_season && <span className="ml-2 text-xs">(out of season)</span>}
+        {product.category && <span className="ml-2 text-xs text-brand-muted">· {product.category}</span>}
+      </span>
+      <div className="flex items-center gap-3">
+        <span className="font-medium text-brand-primary-dark">{formatPrice(product.price_cents, product.unit)}</span>
+        <button onClick={() => setEditing(true)} className="text-xs font-semibold text-brand-primary hover:underline">Edit</button>
+        <button onClick={remove} disabled={busy} className="text-xs font-semibold text-status-alert hover:underline">Delete</button>
+      </div>
+    </div>
+  );
+}
+
+function ProductEditor({
+  initial,
+  submitLabel,
+  busy,
+  onSubmit,
+  onCancel,
+}: {
+  initial: EditorValues;
+  submitLabel: string;
+  busy: boolean;
+  onSubmit: (v: EditorValues) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(initial.name);
+  const [category, setCategory] = useState(initial.category);
+  const [unit, setUnit] = useState(initial.unit);
+  const [price, setPrice] = useState(initial.price);
+  const [inSeason, setInSeason] = useState(initial.in_season);
+
+  return (
+    <div className="rounded-xl border border-brand-accent bg-brand-paper p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block sm:col-span-2">
+          <span className="field-label">Item name</span>
+          <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Sugar snap peas" />
+        </label>
+        <label className="block">
+          <span className="field-label">Category</span>
+          <input className="field-input" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Vegetable" />
+        </label>
+        <label className="block">
+          <span className="field-label">Unit</span>
+          <input className="field-input" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="lb / bunch / each" />
+        </label>
+        <label className="block">
+          <span className="field-label">Price ($)</span>
+          <input className="field-input" value={price} inputMode="decimal" onChange={(e) => setPrice(e.target.value)} placeholder="6.00" />
+        </label>
+        <div>
+          <span className="field-label">Availability</span>
+          <button
+            type="button"
+            onClick={() => setInSeason((s) => !s)}
+            className={[
+              'mt-1 w-full rounded-lg border px-3 py-2 text-sm font-medium transition',
+              inSeason ? 'border-status-ok bg-status-ok/10 text-status-ok' : 'border-brand-line text-brand-muted',
+            ].join(' ')}
+          >
+            {inSeason ? '✓ In season' : 'Out of season'}
+          </button>
+        </div>
+      </div>
+      <div className="mt-3 flex gap-2">
+        <button
+          className="btn-primary"
+          disabled={busy || !name.trim()}
+          onClick={() => onSubmit({ name, category, unit, price, in_season: inSeason })}
+        >
+          {busy ? 'Saving…' : submitLabel}
+        </button>
+        <button className="btn-ghost" disabled={busy} onClick={onCancel}>Cancel</button>
       </div>
     </div>
   );

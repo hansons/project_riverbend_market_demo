@@ -74,6 +74,50 @@ export async function copyAssignments(fromDateId: string, toDateId: string): Pro
   return error?.message ?? null;
 }
 
+// ── Season import/export ──
+export interface ScheduleExportRow {
+  date: string;
+  market: string;
+  vendor: string;
+  slug: string;
+  stalls: string[];
+  status: string;
+}
+
+/** Every assignment across all market dates (admin sees all via RLS). */
+export async function fetchAllSchedule(): Promise<ScheduleExportRow[]> {
+  const { data } = await supabase
+    .from('vendor_schedule')
+    .select('status, stalls, vendors(name, slug), market_dates(date, markets(name))');
+  const rows =
+    (data as unknown as {
+      status: string;
+      stalls: string[] | null;
+      vendors: { name: string; slug: string } | null;
+      market_dates: { date: string; markets: { name: string } | null } | null;
+    }[]) ?? [];
+  return rows
+    .filter((r) => r.vendors && r.market_dates)
+    .map((r) => ({
+      date: r.market_dates!.date,
+      market: r.market_dates!.markets?.name ?? '',
+      vendor: r.vendors!.name,
+      slug: r.vendors!.slug,
+      stalls: r.stalls ?? [],
+      status: r.status,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.vendor.localeCompare(b.vendor));
+}
+
+/** Bulk add/update assignments (one row per vendor+date), keyed on the unique constraint. */
+export async function upsertScheduleBulk(
+  rows: { vendor_id: string; market_date_id: string; status: string; stalls: string[] }[],
+): Promise<string | null> {
+  if (!rows.length) return null;
+  const { error } = await supabase.from('vendor_schedule').upsert(rows, { onConflict: 'vendor_id,market_date_id' });
+  return error?.message ?? null;
+}
+
 // ── Announcements ──
 export async function fetchAllAnnouncements(): Promise<Announcement[]> {
   const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });

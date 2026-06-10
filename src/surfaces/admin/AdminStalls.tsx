@@ -1,18 +1,36 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { fetchMarketDates } from '@/lib/vendorData';
 import {
   fetchScheduleForDate,
   fetchAllVendors,
+  fetchAllSchedule,
+  upsertScheduleBulk,
   setStalls,
   addVendorToDay,
   removeFromDay,
   copyAssignments,
 } from '@/lib/adminData';
 import { useAsync } from '@/lib/useAsync';
+import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
 import { categoryEmoji, formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
 
 const TOTAL_STALLS = 48; // A–D × 12
+
+const CSV_HEADER = ['date', 'market', 'vendor', 'slug', 'stalls', 'status'];
+const CSV_SAMPLE: string[][] = [
+  CSV_HEADER,
+  ['2026-06-13', 'Saturday Market', 'Fern Hollow Farm', 'fern-hollow-farm', 'B11 B12', 'confirmed'],
+  ['2026-06-13', 'Saturday Market', 'Rolling Oak Bakery', 'rolling-oak-bakery', 'A3', 'confirmed'],
+];
+const VALID_STATUS = new Set(['confirmed', 'pending', 'declined']);
+
+interface ImportRow {
+  vendor_id: string;
+  market_date_id: string;
+  status: string;
+  stalls: string[];
+}
 
 function todayISO(): string {
   const n = new Date();
@@ -36,6 +54,8 @@ export function AdminStalls() {
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [importPreview, setImportPreview] = useState<{ rows: ImportRow[]; skipped: number; dates: Set<string> } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const confirmed = rows.filter((r) => r.status === 'confirmed');
   const scheduledIds = new Set(confirmed.map((r) => r.vendor_id));
@@ -96,6 +116,62 @@ export function AdminStalls() {
     if (!window.confirm(`Copy ${prev.markets?.name}'s lineup from ${formatDate(prev.date)} onto this day? Existing assignments for matching vendors will be overwritten.`))
       return;
     run(() => copyAssignments(prev.id, dateId));
+  }
+
+  async function exportSeason() {
+    const all = await fetchAllSchedule();
+    const out = [CSV_HEADER, ...all.map((r) => [r.date, r.market, r.vendor, r.slug, r.stalls.join(' '), r.status])];
+    downloadCSV('riverbend-stall-assignments.csv', toCSV(out));
+  }
+
+  async function onImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (fileRef.current) fileRef.current.value = '';
+    if (!file) return;
+    setHint(null);
+    const parsed = parseCSVObjects(await file.text());
+    const resolved: ImportRow[] = [];
+    const seen = new Set<string>();
+    let skipped = 0;
+    for (const row of parsed) {
+      const date = (row.date ?? '').trim();
+      if (!date) continue;
+      const market = (row.market ?? '').trim().toLowerCase();
+      const md =
+        dates.find((d) => d.date === date && (!market || (d.markets?.name ?? '').toLowerCase() === market)) ??
+        dates.find((d) => d.date === date);
+      const slug = (row.slug ?? '').trim();
+      const name = (row.vendor ?? '').trim().toLowerCase();
+      const v =
+        (slug && allVendors.find((x) => x.slug === slug)) ||
+        allVendors.find((x) => x.name.toLowerCase() === name);
+      if (!md || !v) {
+        skipped++;
+        continue;
+      }
+      const status = VALID_STATUS.has((row.status ?? '').trim()) ? (row.status ?? '').trim() : 'confirmed';
+      const stalls = (row.stalls ?? '').split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
+      resolved.push({ vendor_id: v.id, market_date_id: md.id, status, stalls });
+      seen.add(date);
+    }
+    if (!resolved.length) {
+      setHint('No rows matched a known date + vendor. Header: date, market, vendor, slug, stalls, status.');
+      return;
+    }
+    setImportPreview({ rows: resolved, skipped, dates: seen });
+  }
+
+  async function applyImport() {
+    if (!importPreview) return;
+    setBusy(true);
+    setHint(null);
+    const err = await upsertScheduleBulk(importPreview.rows);
+    setBusy(false);
+    if (err) setHint(err);
+    else {
+      setImportPreview(null);
+      reload();
+    }
   }
 
   return (
@@ -275,6 +351,46 @@ export function AdminStalls() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Season import / export */}
+      <div className="card p-5">
+        <h3 className="text-lg">Set up the season — import / export</h3>
+        <p className="mt-1 text-sm text-brand-muted">
+          Export every date’s assignments, edit the whole season in a spreadsheet, and import it back.
+          Columns: <code className="rounded bg-brand-paper px-1">date, market, vendor, slug, stalls, status</code>{' '}
+          (stalls space-separated, e.g. <code className="rounded bg-brand-paper px-1">B11 B12</code>). Rows are
+          added or updated by vendor + date.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button className="btn-outline" onClick={() => downloadCSV('stall-assignments-sample.csv', toCSV(CSV_SAMPLE))}>
+            ⬇ Sample CSV
+          </button>
+          <button className="btn-outline" onClick={exportSeason}>⬇ Export season</button>
+          <button className="btn-primary" onClick={() => fileRef.current?.click()}>⬆ Import CSV</button>
+          <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onImportFile} className="hidden" />
+        </div>
+
+        {importPreview && (
+          <div className="mt-4 rounded-xl border border-brand-accent bg-brand-paper p-4">
+            <p className="font-semibold text-brand-primary-dark">
+              Apply {importPreview.rows.length} assignment{importPreview.rows.length === 1 ? '' : 's'} across{' '}
+              {importPreview.dates.size} date{importPreview.dates.size === 1 ? '' : 's'}?
+            </p>
+            {importPreview.skipped > 0 && (
+              <p className="mt-1 text-xs text-brand-berry">
+                {importPreview.skipped} row{importPreview.skipped === 1 ? '' : 's'} skipped — unknown vendor or date.
+              </p>
+            )}
+            <p className="mt-1 text-xs text-brand-muted">Existing assignments for the same vendor + date are overwritten.</p>
+            <div className="mt-3 flex gap-2">
+              <button className="btn-primary" onClick={applyImport} disabled={busy}>
+                {busy ? 'Applying…' : 'Apply import'}
+              </button>
+              <button className="btn-ghost" onClick={() => setImportPreview(null)} disabled={busy}>Cancel</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

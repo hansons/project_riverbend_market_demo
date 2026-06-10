@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { toWebp } from '@/lib/image';
 import type {
   Fee,
   MarketDate,
@@ -22,10 +23,33 @@ export async function fetchVendorById(id: string): Promise<Vendor | null> {
 
 export async function updateVendor(
   id: string,
-  patch: Partial<Pick<Vendor, 'tagline' | 'story' | 'town' | 'category' | 'practices' | 'market_days'>>,
+  patch: Partial<
+    Pick<Vendor, 'tagline' | 'story' | 'town' | 'category' | 'practices' | 'market_days' | 'image_url' | 'logo_url'>
+  >,
 ): Promise<string | null> {
   const { error } = await supabase.from('vendors').update(patch).eq('id', id);
   return error?.message ?? null;
+}
+
+/** Rescale + WebP-convert in the browser, upload to Storage, return a public URL. */
+export async function uploadVendorImage(
+  vendorId: string,
+  kind: 'logo' | 'cover',
+  file: File,
+): Promise<{ url: string | null; error: string | null }> {
+  try {
+    const blob = await toWebp(file, kind === 'logo' ? 400 : 1200);
+    const path = `${vendorId}/${kind}.webp`;
+    const { error } = await supabase.storage
+      .from('vendor-photos')
+      .upload(path, blob, { upsert: true, contentType: 'image/webp' });
+    if (error) return { url: null, error: error.message };
+    const { data } = supabase.storage.from('vendor-photos').getPublicUrl(path);
+    // Cache-bust: the path is reused on re-upload, so vary the query string.
+    return { url: `${data.publicUrl}?t=${Date.now()}`, error: null };
+  } catch (e) {
+    return { url: null, error: e instanceof Error ? e.message : 'Upload failed.' };
+  }
 }
 
 // ── Weekly offerings ──

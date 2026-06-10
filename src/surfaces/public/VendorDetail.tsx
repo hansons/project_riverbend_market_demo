@@ -63,7 +63,16 @@ export function VendorDetail({ slug }: { slug: string }) {
                 </span>
                 {vendor.town && <span className="text-sm text-brand-muted">📍 {vendor.town}</span>}
               </div>
-              <h1 className="mt-3 text-3xl">{vendor.name}</h1>
+              <div className="mt-3 flex items-center gap-3">
+                {vendor.logo_url && (
+                  <img
+                    src={vendor.logo_url}
+                    alt=""
+                    className="h-12 w-12 shrink-0 rounded-lg border border-brand-line bg-white object-contain p-0.5"
+                  />
+                )}
+                <h1 className="text-3xl">{vendor.name}</h1>
+              </div>
               {vendor.tagline && <p className="mt-1 text-lg text-brand-muted">{vendor.tagline}</p>}
               {vendor.story && <p className="mt-4 leading-relaxed text-brand-ink/90">{vendor.story}</p>}
 

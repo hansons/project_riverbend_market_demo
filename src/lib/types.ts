@@ -58,6 +58,7 @@ export interface Vendor {
   practices: string[];
   market_days: string[];
   image_url: string | null;
+  logo_url: string | null;
   email: string | null;
   status: VendorStatus;
   featured: boolean;

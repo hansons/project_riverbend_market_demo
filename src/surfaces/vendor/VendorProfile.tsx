@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { updateVendor } from '@/lib/vendorData';
+import { ImageUploader } from './ImageUploader';
 import type { Vendor } from '@/lib/types';
 
 const MARKET_DAYS = ['Saturday', 'Wednesday'];
@@ -17,6 +18,11 @@ export function VendorProfile({ vendor, onSaved }: { vendor: Vendor; onSaved: ()
   function toggleDay(d: string) {
     setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]));
     setResult(null);
+  }
+
+  async function saveImage(field: 'logo_url' | 'image_url', url: string) {
+    await updateVendor(vendor.id, { [field]: url });
+    onSaved();
   }
 
   async function save() {
@@ -42,6 +48,27 @@ export function VendorProfile({ vendor, onSaved }: { vendor: Vendor; onSaved: ()
         This is what shoppers see on your public vendor page. Changes save straight to the database —
         and RLS only lets you edit <em>your own</em> farm.
       </p>
+
+      <div className="mt-6 grid gap-5 sm:grid-cols-2">
+        <ImageUploader
+          vendorId={vendor.id}
+          kind="logo"
+          label="Logo"
+          hint="Square works best · saved as 400px WebP"
+          currentUrl={vendor.logo_url}
+          shape="square"
+          onUploaded={(url) => saveImage('logo_url', url)}
+        />
+        <ImageUploader
+          vendorId={vendor.id}
+          kind="cover"
+          label="Cover photo"
+          hint="Wide shot · saved as 1200px WebP"
+          currentUrl={vendor.image_url}
+          shape="wide"
+          onUploaded={(url) => saveImage('image_url', url)}
+        />
+      </div>
 
       <div className="mt-6 space-y-4">
         <label className="block">

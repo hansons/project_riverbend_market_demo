@@ -19,6 +19,11 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
             Featured
           </span>
         )}
+        {vendor.logo_url && (
+          <div className="absolute bottom-2 left-2 h-10 w-10 overflow-hidden rounded-lg border border-white/80 bg-white shadow">
+            <img src={vendor.logo_url} alt="" className="h-full w-full object-contain p-0.5" />
+          </div>
+        )}
       </div>
       <div className="p-4">
         <div className="flex items-center justify-between gap-2">

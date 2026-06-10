@@ -46,6 +46,13 @@ export async function fetchVendorProducts(vendorId: string): Promise<VendorProdu
   return (data as VendorProduct[]) ?? [];
 }
 
+/** Lightweight product index (active vendors only, via RLS) for matching items to vendors. */
+export async function fetchAllProducts(): Promise<{ vendor_id: string; name: string; in_season: boolean }[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data } = await supabase.from('vendor_products').select('vendor_id, name, in_season');
+  return (data as { vendor_id: string; name: string; in_season: boolean }[]) ?? [];
+}
+
 export async function fetchSeasonality(): Promise<SeasonItem[]> {
   if (!isSupabaseConfigured) return [];
   const { data } = await supabase.from('seasonality').select('*').order('sort');

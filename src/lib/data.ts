@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { isProductInSeason } from '@/lib/format';
 import type {
   Announcement,
   AnnouncementAudience,
@@ -109,8 +110,10 @@ export async function fetchVendorProducts(vendorId: string): Promise<VendorProdu
 /** Lightweight product index (active vendors only, via RLS) for matching items to vendors. */
 export async function fetchAllProducts(): Promise<{ vendor_id: string; name: string; in_season: boolean }[]> {
   if (!isSupabaseConfigured) return [];
-  const { data } = await supabase.from('vendor_products').select('vendor_id, name, in_season');
-  return (data as { vendor_id: string; name: string; in_season: boolean }[]) ?? [];
+  const { data } = await supabase.from('vendor_products').select('vendor_id, name, in_season, season_months');
+  const rows = (data as { vendor_id: string; name: string; in_season: boolean; season_months: number[] }[]) ?? [];
+  // Effective in-season: scheduled products auto-flip by month.
+  return rows.map((r) => ({ vendor_id: r.vendor_id, name: r.name, in_season: isProductInSeason(r) }));
 }
 
 export async function fetchSeasonality(): Promise<SeasonItem[]> {

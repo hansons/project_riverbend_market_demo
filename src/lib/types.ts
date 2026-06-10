@@ -90,6 +90,7 @@ export interface VendorProduct {
   unit: string | null;
   price_cents: number | null;
   in_season: boolean;
+  season_months: number[]; // when non-empty, in-season is computed from the current month
   sort: number;
 }
 

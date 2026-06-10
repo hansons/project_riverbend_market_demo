@@ -9,7 +9,7 @@ import {
 import { fetchMarketDates } from '@/lib/vendorData';
 import { useAsync } from '@/lib/useAsync';
 import { navigate } from '@/lib/router';
-import { categoryEmoji, formatDate, formatPrice, thisSaturdayISO } from '@/lib/format';
+import { categoryEmoji, formatDate, formatPrice, isProductInSeason, thisSaturdayISO } from '@/lib/format';
 import { VendorImage } from './VendorImage';
 import { MarketMap } from '@/components/MarketMap';
 import type { Vendor } from '@/lib/types';
@@ -80,8 +80,8 @@ export function VendorDetail({ slug }: { slug: string }) {
     );
   }
 
-  const inSeason = products.filter((p) => p.in_season);
-  const offSeason = products.filter((p) => !p.in_season);
+  const inSeason = products.filter((p) => isProductInSeason(p));
+  const offSeason = products.filter((p) => !isProductInSeason(p));
 
   return (
     <div className="mx-auto max-w-content px-4 py-8">
@@ -183,9 +183,9 @@ export function VendorDetail({ slug }: { slug: string }) {
               <ul className="mt-3 divide-y divide-brand-line">
                 {[...inSeason, ...offSeason].map((p) => (
                   <li key={p.id} className="flex items-center justify-between py-2 text-sm">
-                    <span className={p.in_season ? 'text-brand-ink' : 'text-brand-muted'}>
+                    <span className={isProductInSeason(p) ? 'text-brand-ink' : 'text-brand-muted'}>
                       {p.name}
-                      {!p.in_season && <span className="ml-2 text-xs">(out of season)</span>}
+                      {!isProductInSeason(p) && <span className="ml-2 text-xs">(out of season)</span>}
                     </span>
                     <span className="font-medium text-brand-primary-dark">
                       {formatPrice(p.price_cents, p.unit)}

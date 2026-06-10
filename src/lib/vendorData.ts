@@ -77,6 +77,7 @@ export interface ProductInput {
   unit: string | null;
   price_cents: number | null;
   in_season: boolean;
+  season_months: number[];
   sort: number;
 }
 

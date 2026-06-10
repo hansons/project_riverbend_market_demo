@@ -7,6 +7,68 @@ export function currentMonth(): number {
   return new Date().getMonth() + 1;
 }
 
+/** Parse a season string into month numbers (1–12). Accepts "5-9", "5,6,7", "May-Jun", "Nov-Feb", "Jan-Mar,Oct-Dec". */
+export function parseMonths(input: string): number[] {
+  const s = (input ?? '').trim();
+  if (!s) return [];
+  const toNum = (tok: string): number | null => {
+    const t = tok.trim().toLowerCase();
+    if (!t) return null;
+    if (/^\d+$/.test(t)) {
+      const n = parseInt(t, 10);
+      return n >= 1 && n <= 12 ? n : null;
+    }
+    const idx = MONTHS.findIndex((m) => m.toLowerCase() === t.slice(0, 3));
+    return idx >= 0 ? idx + 1 : null;
+  };
+  const out = new Set<number>();
+  for (const part of s.split(',')) {
+    const range = part.split(/[-–—]/);
+    if (range.length === 2) {
+      const a = toNum(range[0]);
+      const b = toNum(range[1]);
+      if (a && b) {
+        let i = a;
+        for (let k = 0; k < 12; k++) {
+          out.add(i);
+          if (i === b) break;
+          i = i === 12 ? 1 : i + 1; // wraps (e.g. Nov–Feb)
+        }
+      }
+    } else {
+      const n = toNum(part);
+      if (n) out.add(n);
+    }
+  }
+  return [...out].sort((x, y) => x - y);
+}
+
+/** Compact month list as labels, e.g. {5,6} → "May–Jun", {1,2,3,10,11,12} → "Jan–Mar, Oct–Dec". */
+export function formatMonths(months: number[]): string {
+  const sorted = [...new Set(months ?? [])].filter((m) => m >= 1 && m <= 12).sort((a, b) => a - b);
+  if (!sorted.length) return '';
+  const ranges: [number, number][] = [];
+  let start = sorted[0];
+  let prev = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === prev + 1) prev = sorted[i];
+    else {
+      ranges.push([start, prev]);
+      start = prev = sorted[i];
+    }
+  }
+  ranges.push([start, prev]);
+  return ranges.map(([a, b]) => (a === b ? MONTHS[a - 1] : `${MONTHS[a - 1]}–${MONTHS[b - 1]}`)).join(', ');
+}
+
+/** Effective in-season: a scheduled product flips by month; otherwise its manual flag stands. */
+export function isProductInSeason(
+  p: { season_months: number[]; in_season: boolean },
+  month: number = currentMonth(),
+): boolean {
+  return p.season_months && p.season_months.length ? p.season_months.includes(month) : p.in_season;
+}
+
 export function formatPrice(cents: number | null, unit: string | null): string {
   if (cents == null) return '';
   const dollars = (cents / 100).toFixed(2).replace(/\.00$/, '');

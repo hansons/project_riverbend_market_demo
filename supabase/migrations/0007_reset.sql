@@ -276,6 +276,16 @@ begin
     ('a0000000-0000-4000-8000-000000000020', 'Polenta', 'Grain', 'bag', 500, true, 3),
     ('a0000000-0000-4000-8000-000000000020', 'Rolled oats', 'Grain', 'bag', 450, true, 4);
 
+  -- Seasonal products auto-flip by month; year-round items keep season_months empty.
+  update vendor_products set season_months = '{5,6}'     where name in ('Strawberries', 'Sugar snap peas', 'Garlic scapes', 'Fava beans');
+  update vendor_products set season_months = '{6,7}'     where name in ('Cherries', 'Raspberries');
+  update vendor_products set season_months = '{6,7,8}'   where name in ('Blueberries');
+  update vendor_products set season_months = '{7,8}'     where name in ('Marionberries');
+  update vendor_products set season_months = '{7,8,9}'   where name in ('Heirloom tomatoes', 'Mixed dahlia bouquet', 'Sunflower bunch');
+  update vendor_products set season_months = '{9,10,11}' where name in ('Honeycrisp apples');
+  update vendor_products set season_months = '{9,10}'    where name in ('Bartlett pears');
+  update vendor_products set season_months = '{10,11}'   where name in ('Fresh cider');
+
   insert into seasonality (item, category, emoji, status, months, note, sort) values
     ('Tamales & tacos',  'Prepared Food', '🌮', 'ready', '{1,2,3,4,5,6,7,8,9,10,11,12}', 'La Cocina Verde — made to order', 1),
     ('Samosas & chaat',  'Prepared Food', '🥟', 'ready', '{1,2,3,4,5,6,7,8,9,10,11,12}', 'Masala Cart — veg & vegan', 2),

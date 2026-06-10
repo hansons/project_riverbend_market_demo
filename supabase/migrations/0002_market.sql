@@ -49,7 +49,8 @@ create table vendor_products (
   category   text,
   unit       text,                  -- 'bunch', 'lb', 'pint'
   price_cents int,
-  in_season  boolean not null default true,
+  in_season     boolean not null default true,   -- manual flag, used when season_months is empty
+  season_months int[] not null default '{}',     -- when set, in-season auto-flips by current month
   sort       int not null default 0
 );
 create index vendor_products_vendor_idx on vendor_products(vendor_id);

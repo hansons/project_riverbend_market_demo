@@ -12,15 +12,16 @@ import {
 import { useAsync } from '@/lib/useAsync';
 import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
 import { CsvToolbar } from '@/components/CsvToolbar';
-import { formatPrice } from '@/lib/format';
+import { currentMonth, formatMonths, formatPrice, isProductInSeason, parseMonths } from '@/lib/format';
 import type { ProductCategory, Vendor, VendorProduct } from '@/lib/types';
 
-const HEADER = ['name', 'category', 'unit', 'price', 'in_season', 'sort'];
+const HEADER = ['name', 'category', 'unit', 'price', 'in_season', 'season', 'sort'];
 const SAMPLE: string[][] = [
   HEADER,
-  ['Sugar snap peas', 'Vegetable', 'lb', '6.00', 'true', '1'],
-  ['Rainbow chard', 'Vegetable', 'bunch', '3.50', 'true', '2'],
-  ['Heirloom tomatoes', 'Vegetable', 'lb', '5.00', 'false', '3'],
+  ['Strawberries', 'Fruit', 'pint', '5.00', 'true', 'May-Jun', '1'],
+  ['Sugar snap peas', 'Vegetable', 'lb', '6.00', 'true', 'May-Jun', '2'],
+  ['Heirloom tomatoes', 'Vegetable', 'lb', '5.00', 'false', 'Jul-Sep', '3'],
+  ['Aged cheddar', 'Cheese', 'wedge', '11.00', 'true', '', '4'],
 ];
 
 const parseBool = (s: string) => {
@@ -38,8 +39,9 @@ interface EditorValues {
   unit: string;
   price: string;
   in_season: boolean;
+  season: string;
 }
-const EMPTY: EditorValues = { name: '', category: '', unit: '', price: '', in_season: true };
+const EMPTY: EditorValues = { name: '', category: '', unit: '', price: '', in_season: true, season: '' };
 
 const toInput = (v: EditorValues, sort: number): ProductInput => ({
   name: v.name.trim(),
@@ -47,6 +49,7 @@ const toInput = (v: EditorValues, sort: number): ProductInput => ({
   unit: v.unit.trim() || null,
   price_cents: parsePrice(v.price),
   in_season: v.in_season,
+  season_months: parseMonths(v.season),
   sort,
 });
 
@@ -72,6 +75,7 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
         p.unit ?? '',
         p.price_cents == null ? '' : (p.price_cents / 100).toFixed(2),
         String(p.in_season),
+        formatMonths(p.season_months),
         String(p.sort || i + 1),
       ]),
     ];
@@ -91,10 +95,11 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
         unit: o.unit?.trim() || null,
         price_cents: parsePrice(o.price),
         in_season: o.in_season === undefined ? true : parseBool(o.in_season),
+        season_months: parseMonths(o.season ?? ''),
         sort: o.sort ? parseInt(o.sort, 10) || i + 1 : i + 1,
       }));
     if (!parsed.length) {
-      setError('No rows with a name found. Header should be: name, category, unit, price, in_season, sort.');
+      setError('No rows with a name found. Header should be: name, category, unit, price, in_season, season, sort.');
       setPreview(null);
       return;
     }
@@ -165,7 +170,7 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
           <div className="mt-3 max-h-64 overflow-y-auto rounded-lg border border-brand-line">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-brand-paper text-left text-xs uppercase text-brand-muted">
-                <tr><th className="p-2">Item</th><th className="p-2">Category</th><th className="p-2">Price</th><th className="p-2">In season</th></tr>
+                <tr><th className="p-2">Item</th><th className="p-2">Category</th><th className="p-2">Price</th><th className="p-2">Season</th><th className="p-2">In now</th></tr>
               </thead>
               <tbody>
                 {preview.map((p, i) => (
@@ -173,7 +178,8 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
                     <td className="p-2">{p.name}</td>
                     <td className="p-2 text-brand-muted">{p.category ?? '—'}</td>
                     <td className="p-2">{formatPrice(p.price_cents, p.unit)}</td>
-                    <td className="p-2">{p.in_season ? '✓' : '—'}</td>
+                    <td className="p-2 text-brand-muted">{formatMonths(p.season_months) || 'Year-round'}</td>
+                    <td className="p-2">{isProductInSeason(p) ? '✓' : '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -263,6 +269,7 @@ function ProductRow({
           unit: product.unit ?? '',
           price: product.price_cents == null ? '' : (product.price_cents / 100).toFixed(2),
           in_season: product.in_season,
+          season: formatMonths(product.season_months),
         }}
         submitLabel="Save"
         busy={busy}
@@ -276,9 +283,12 @@ function ProductRow({
 
   return (
     <div className="card flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-      <span className={product.in_season ? 'text-brand-ink' : 'text-brand-muted'}>
+      <span className={isProductInSeason(product) ? 'text-brand-ink' : 'text-brand-muted'}>
         {product.name}
-        {!product.in_season && <span className="ml-2 text-xs">(out of season)</span>}
+        {product.season_months.length > 0 && (
+          <span className="ml-2 text-xs text-brand-accent">{formatMonths(product.season_months)}</span>
+        )}
+        {!isProductInSeason(product) && <span className="ml-2 text-xs">(out of season)</span>}
       </span>
       <div className="flex items-center gap-3">
         <span className="font-medium text-brand-primary-dark">{formatPrice(product.price_cents, product.unit)}</span>
@@ -311,11 +321,14 @@ function ProductEditor({
   const [unit, setUnit] = useState(initial.unit);
   const [price, setPrice] = useState(initial.price);
   const [inSeason, setInSeason] = useState(initial.in_season);
+  const [season, setSeason] = useState(initial.season);
   const [addingCat, setAddingCat] = useState(false);
   const [newCat, setNewCat] = useState('');
   const [reqBusy, setReqBusy] = useState(false);
 
   const known = categories.some((c) => c.name === category);
+  const months = parseMonths(season);
+  const showInSeason = months.length > 0 ? months.includes(currentMonth()) : inSeason;
 
   async function requestNew() {
     const n = newCat.trim();
@@ -361,20 +374,43 @@ function ProductEditor({
           <span className="field-label">Price ($)</span>
           <input className="field-input" value={price} inputMode="decimal" onChange={(e) => setPrice(e.target.value)} placeholder="6.00" />
         </label>
+        <label className="block">
+          <span className="field-label">Season (months)</span>
+          <input
+            className="field-input"
+            value={season}
+            onChange={(e) => setSeason(e.target.value)}
+            placeholder="e.g. May–Jun · blank = year-round"
+          />
+        </label>
         <div>
-          <span className="field-label">Availability</span>
+          <span className="field-label">
+            Availability{months.length > 0 && <span className="ml-1 text-brand-muted">(auto by season)</span>}
+          </span>
           <button
             type="button"
             onClick={() => setInSeason((s) => !s)}
+            disabled={months.length > 0}
             className={[
-              'mt-1 w-full rounded-lg border px-3 py-2 text-sm font-medium transition',
-              inSeason ? 'border-status-ok bg-status-ok/10 text-status-ok' : 'border-brand-line text-brand-muted',
+              'mt-1 w-full rounded-lg border px-3 py-2 text-sm font-medium transition disabled:opacity-90',
+              showInSeason ? 'border-status-ok bg-status-ok/10 text-status-ok' : 'border-brand-line text-brand-muted',
             ].join(' ')}
           >
-            {inSeason ? '✓ In season' : 'Out of season'}
+            {months.length > 0
+              ? showInSeason
+                ? '✓ In season now'
+                : 'Out of season now'
+              : inSeason
+                ? '✓ In season'
+                : 'Out of season'}
           </button>
         </div>
       </div>
+      {months.length > 0 && (
+        <p className="mt-2 text-xs text-brand-muted">
+          Auto-listed {formatMonths(months)} — flips in and out of season on its own.
+        </p>
+      )}
 
       {addingCat && (
         <div className="mt-3 rounded-lg border border-brand-line bg-brand-card p-3">
@@ -393,7 +429,7 @@ function ProductEditor({
       )}
 
       <div className="mt-3 flex gap-2">
-        <button className="btn-primary" disabled={busy || !name.trim()} onClick={() => onSubmit({ name, category, unit, price, in_season: inSeason })}>
+        <button className="btn-primary" disabled={busy || !name.trim()} onClick={() => onSubmit({ name, category, unit, price, in_season: inSeason, season })}>
           {busy ? 'Saving…' : submitLabel}
         </button>
         <button className="btn-ghost" disabled={busy} onClick={onCancel}>Cancel</button>

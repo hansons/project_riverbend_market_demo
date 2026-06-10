@@ -347,7 +347,7 @@ function ProductEditor({
               </option>
             ))}
             {category && !known && <option value={category}>{category}</option>}
-            <option value="__add__">+ Add new category…</option>
+            <option value="__add__">Other — add a category…</option>
           </select>
         </label>
         <label className="block">

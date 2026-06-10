@@ -12,6 +12,7 @@ const MARKET_DAYS = ['Saturday', 'Wednesday'];
 export function ApplyForm() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
+  const [otherCat, setOtherCat] = useState('');
   const [town, setTown] = useState('');
   const [email, setEmail] = useState('');
   const [tagline, setTagline] = useState('');
@@ -32,7 +33,7 @@ export function ApplyForm() {
     setState('sending');
     const err = await submitApplication({
       name: name.trim(),
-      category,
+      category: category === '__other__' ? otherCat.trim() || 'Other' : category,
       town: town.trim(),
       email: email.trim(),
       tagline: tagline.trim(),
@@ -78,7 +79,16 @@ export function ApplyForm() {
             <span className="field-label">Category</span>
             <select className="field-input" value={category} onChange={(e) => setCategory(e.target.value)}>
               {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+              <option value="__other__">Other…</option>
             </select>
+            {category === '__other__' && (
+              <input
+                className="field-input mt-2"
+                value={otherCat}
+                onChange={(e) => setOtherCat(e.target.value)}
+                placeholder="Tell us your category"
+              />
+            )}
           </label>
           <label className="block">
             <span className="field-label">Town</span>

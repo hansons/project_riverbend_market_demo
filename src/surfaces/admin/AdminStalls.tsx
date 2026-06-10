@@ -39,6 +39,18 @@ export function AdminStalls() {
   for (const r of confirmed) for (const st of r.stalls) occupied[st] = { name: r.vendors?.name ?? 'Vendor' };
   const filledCells = Object.keys(occupied).length;
 
+  // Category coverage + balance recommendations: which categories the active
+  // vendor pool can offer, how many are scheduled today, and who fills the gaps.
+  const activeCats = [...new Set(allVendors.filter((v) => v.status === 'active').map((v) => v.category))].sort();
+  const schedByCat: Record<string, number> = {};
+  for (const r of confirmed) {
+    const c = r.vendors?.category ?? '—';
+    schedByCat[c] = (schedByCat[c] ?? 0) + 1;
+  }
+  const gapCats = activeCats.filter((c) => !schedByCat[c]);
+  const balanceSuggestions = addable.filter((v) => gapCats.includes(v.category));
+  const otherAddable = addable.filter((v) => !gapCats.includes(v.category));
+
   // Previous date of the same market, for "Copy last market".
   const current = dates.find((d) => d.id === dateId);
   const prev = current
@@ -115,6 +127,37 @@ export function AdminStalls() {
         {addable.length > 0 && <span className="chip text-brand-berry">{addable.length} not scheduled</span>}
       </div>
 
+      {!loading && dateId && activeCats.length > 0 && (
+        <div>
+          <p className="field-label">
+            Category mix
+            {gapCats.length > 0 && (
+              <span className="ml-2 font-normal text-brand-berry">
+                · {gapCats.length} categor{gapCats.length > 1 ? 'ies' : 'y'} unfilled
+              </span>
+            )}
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {activeCats.map((c) => {
+              const n = schedByCat[c] ?? 0;
+              return (
+                <span
+                  key={c}
+                  title={n === 0 ? `No ${c} vendor scheduled` : `${n} ${c} vendor${n > 1 ? 's' : ''}`}
+                  className={
+                    n === 0
+                      ? 'rounded-full border border-dashed border-brand-berry px-2.5 py-0.5 text-xs font-medium text-brand-berry'
+                      : 'chip'
+                  }
+                >
+                  {c} · {n}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {hint && <p className="text-sm text-brand-berry">{hint}</p>}
 
       {!loading && dateId && <MarketMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} />}
@@ -178,21 +221,49 @@ export function AdminStalls() {
           {addable.length === 0 ? (
             <p className="mt-2 text-sm text-brand-muted">Every active vendor is scheduled.</p>
           ) : (
-            <div className="mt-3 card divide-y divide-brand-line">
-              {addable.map((v) => (
-                <div key={v.id} className="flex items-center justify-between gap-2 p-3 text-sm">
-                  <span className="min-w-0 truncate">
-                    {categoryEmoji(v.category)} <span className="font-medium text-brand-ink">{v.name}</span>
-                  </span>
-                  <button
-                    onClick={() => run(() => addVendorToDay(v.id, dateId)).then(() => setSelectedVendorId(v.id))}
-                    disabled={busy}
-                    className="shrink-0 rounded-lg border border-brand-line px-3 py-1 text-xs font-semibold hover:bg-brand-paper"
-                  >
-                    + Add
-                  </button>
+            <div className="mt-3 space-y-3">
+              {balanceSuggestions.length > 0 && (
+                <div className="rounded-2xl border border-brand-accent bg-brand-accent/5 p-3">
+                  <p className="text-xs font-semibold text-brand-ink">⚖️ Suggested to balance the mix</p>
+                  <p className="mt-0.5 text-[11px] text-brand-muted">Fills categories with no vendor this day.</p>
+                  <div className="mt-2 divide-y divide-brand-line">
+                    {balanceSuggestions.map((v) => (
+                      <div key={v.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                        <span className="min-w-0 truncate">
+                          {categoryEmoji(v.category)} <span className="font-medium text-brand-ink">{v.name}</span>
+                          <span className="ml-1 text-xs text-brand-berry">fills {v.category}</span>
+                        </span>
+                        <button
+                          onClick={() => run(() => addVendorToDay(v.id, dateId)).then(() => setSelectedVendorId(v.id))}
+                          disabled={busy}
+                          className="shrink-0 rounded-lg border border-brand-accent px-3 py-1 text-xs font-semibold text-brand-ink hover:bg-brand-accent/15"
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
+              {otherAddable.length > 0 && (
+                <div className="card divide-y divide-brand-line">
+                  {otherAddable.map((v) => (
+                    <div key={v.id} className="flex items-center justify-between gap-2 p-3 text-sm">
+                      <span className="min-w-0 truncate">
+                        {categoryEmoji(v.category)} <span className="font-medium text-brand-ink">{v.name}</span>
+                        <span className="ml-1 text-xs text-brand-muted">· {v.category}</span>
+                      </span>
+                      <button
+                        onClick={() => run(() => addVendorToDay(v.id, dateId)).then(() => setSelectedVendorId(v.id))}
+                        disabled={busy}
+                        className="shrink-0 rounded-lg border border-brand-line px-3 py-1 text-xs font-semibold hover:bg-brand-paper"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -4,6 +4,7 @@ import type {
   MarketDate,
   Message,
   MessageSender,
+  ProductCategory,
   ScheduleStatus,
   Vendor,
   VendorOffering,
@@ -76,6 +77,19 @@ export async function updateProduct(id: string, patch: Partial<ProductInput>): P
 
 export async function deleteProduct(id: string): Promise<string | null> {
   const { error } = await supabase.from('vendor_products').delete().eq('id', id);
+  return error?.message ?? null;
+}
+
+// ── Product categories (active list + this vendor's own pending requests) ──
+export async function fetchProductCategories(): Promise<ProductCategory[]> {
+  const { data } = await supabase.from('product_categories').select('*').order('name');
+  return (data as ProductCategory[]) ?? [];
+}
+
+export async function requestCategory(vendorId: string, name: string): Promise<string | null> {
+  const { error } = await supabase
+    .from('product_categories')
+    .insert({ name: name.trim(), status: 'pending', requested_by: vendorId });
   return error?.message ?? null;
 }
 

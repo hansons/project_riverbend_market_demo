@@ -3,6 +3,7 @@ import type {
   Announcement,
   AnnouncementAudience,
   Fee,
+  ProductCategory,
   ScheduleStatus,
   ScheduleWithVendor,
   Vendor,
@@ -58,6 +59,22 @@ export async function createAnnouncement(a: {
 
 export async function setAnnouncementActive(id: string, active: boolean): Promise<string | null> {
   const { error } = await supabase.from('announcements').update({ active }).eq('id', id);
+  return error?.message ?? null;
+}
+
+// ── Product categories ──
+export async function fetchAllCategories(): Promise<ProductCategory[]> {
+  const { data } = await supabase.from('product_categories').select('*').order('name');
+  return (data as ProductCategory[]) ?? [];
+}
+
+export async function approveCategory(id: string): Promise<string | null> {
+  const { error } = await supabase.from('product_categories').update({ status: 'active' }).eq('id', id);
+  return error?.message ?? null;
+}
+
+export async function deleteCategory(id: string): Promise<string | null> {
+  const { error } = await supabase.from('product_categories').delete().eq('id', id);
   return error?.message ?? null;
 }
 

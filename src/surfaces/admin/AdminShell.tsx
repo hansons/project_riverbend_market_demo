@@ -4,6 +4,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { AdminDashboard } from './AdminDashboard';
 import { AdminApplications } from './AdminApplications';
 import { AdminVendors } from './AdminVendors';
+import { AdminCategories } from './AdminCategories';
 import { AdminStalls } from './AdminStalls';
 import { AdminAnnouncements } from './AdminAnnouncements';
 import { AdminReports } from './AdminReports';
@@ -12,6 +13,7 @@ export type AdminSection =
   | 'dashboard'
   | 'applications'
   | 'vendors'
+  | 'categories'
   | 'stalls'
   | 'announcements'
   | 'reports';
@@ -20,6 +22,7 @@ const SECTIONS: { key: AdminSection; label: string; icon: string }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
   { key: 'applications', label: 'Applications', icon: '📥' },
   { key: 'vendors', label: 'Vendors', icon: '🧑‍🌾' },
+  { key: 'categories', label: 'Categories', icon: '🏷️' },
   { key: 'stalls', label: 'Stall Map', icon: '🗺️' },
   { key: 'announcements', label: 'Announcements', icon: '📣' },
   { key: 'reports', label: 'Reports', icon: '📊' },
@@ -63,6 +66,7 @@ export function AdminShell() {
           {section === 'dashboard' && <AdminDashboard onGo={setSection} />}
           {section === 'applications' && <AdminApplications />}
           {section === 'vendors' && <AdminVendors />}
+          {section === 'categories' && <AdminCategories />}
           {section === 'stalls' && <AdminStalls />}
           {section === 'announcements' && <AdminAnnouncements />}
           {section === 'reports' && <AdminReports />}

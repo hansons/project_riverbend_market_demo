@@ -12,6 +12,7 @@ begin;
 
 -- Clear domain rows (children first). Vendors are UPSERTED below rather than
 -- deleted, so profiles.vendor_id links survive a re-seed.
+delete from product_categories;
 delete from announcements;
 delete from messages;
 delete from fees;
@@ -36,6 +37,21 @@ insert into tenants (id, slug, name, tagline, region, is_active, brand) values
    false,
    '{"primary":"30 92 110","primary-dark":"22 67 79","accent":"232 115 46","berry":"122 79 163","ink":"31 41 51","paper":"244 247 248","card":"255 255 255","muted":"91 107 115","line":"220 230 233"}'::jsonb)
 on conflict (id) do nothing;
+
+-- ─── Product categories ──────────────────────────────────────────────
+-- The approved list vendors pick from, plus one pending request for the admin
+-- Categories queue to demo the approval flow.
+insert into product_categories (name, status, requested_by) values
+  ('Vegetable', 'active', null), ('Fruit', 'active', null), ('Herb', 'active', null),
+  ('Mushroom', 'active', null), ('Bread', 'active', null), ('Pastry', 'active', null),
+  ('Meat', 'active', null), ('Eggs', 'active', null), ('Cheese', 'active', null),
+  ('Dairy', 'active', null), ('Seafood', 'active', null), ('Prepared', 'active', null),
+  ('Beverage', 'active', null), ('Coffee', 'active', null), ('Tea', 'active', null),
+  ('Pantry', 'active', null), ('Flowers', 'active', null), ('Plant', 'active', null),
+  ('Nuts', 'active', null), ('Grain', 'active', null), ('Body', 'active', null),
+  ('Home', 'active', null),
+  ('Pickles & Ferments', 'pending', 'a0000000-0000-4000-8000-000000000010')
+on conflict (name) do nothing;
 
 -- ─── Markets ─────────────────────────────────────────────────────────
 -- Venue names/cross-streets are fictional on purpose.

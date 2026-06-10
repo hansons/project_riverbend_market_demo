@@ -139,6 +139,17 @@ export interface Message {
   created_at: string;
 }
 
+// ─── Product categories (managed, with request flow) ────────────────
+export type CategoryStatus = 'active' | 'pending';
+
+export interface ProductCategory {
+  id: string;
+  name: string;
+  status: CategoryStatus;
+  requested_by: string | null;
+  created_at: string;
+}
+
 // ─── Admin portal (Slice 3) ──────────────────────────────────────────
 export type AnnouncementAudience = 'public' | 'vendors' | 'all';
 

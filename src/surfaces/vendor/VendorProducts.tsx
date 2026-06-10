@@ -3,14 +3,16 @@ import { fetchVendorProducts } from '@/lib/data';
 import {
   addProduct,
   deleteProduct,
+  fetchProductCategories,
   replaceProducts,
+  requestCategory,
   updateProduct,
   type ProductInput,
 } from '@/lib/vendorData';
 import { useAsync } from '@/lib/useAsync';
 import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
 import { formatPrice } from '@/lib/format';
-import type { Vendor, VendorProduct } from '@/lib/types';
+import type { ProductCategory, Vendor, VendorProduct } from '@/lib/types';
 
 const HEADER = ['name', 'category', 'unit', 'price', 'in_season', 'sort'];
 const SAMPLE: string[][] = [
@@ -49,11 +51,17 @@ const toInput = (v: EditorValues, sort: number): ProductInput => ({
 
 export function VendorProducts({ vendor }: { vendor: Vendor }) {
   const { data: products, loading, reload } = useAsync(() => fetchVendorProducts(vendor.id), [vendor.id], []);
+  const { data: categories, reload: reloadCats } = useAsync(fetchProductCategories, [], []);
   const [preview, setPreview] = useState<ProductInput[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  async function requestCat(name: string) {
+    await requestCategory(vendor.id, name);
+    reloadCats();
+  }
 
   function exportCurrent() {
     const rows = [
@@ -114,24 +122,30 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
     reload();
   }
 
+  // Group products by category so the list self-organizes.
+  const groups = new Map<string, VendorProduct[]>();
+  for (const p of products) {
+    const k = p.category || 'Uncategorized';
+    const arr = groups.get(k) ?? [];
+    arr.push(p);
+    groups.set(k, arr);
+  }
+  const groupKeys = [...groups.keys()].sort((a, b) =>
+    a === 'Uncategorized' ? 1 : b === 'Uncategorized' ? -1 : a.localeCompare(b),
+  );
+
   return (
     <div className="space-y-5">
       <div className="card p-6">
         <h2 className="text-xl">Stand list</h2>
         <p className="mt-1 text-sm text-brand-muted">
-          The products &amp; prices shown on your public page. Edit items below, or update the whole list
-          in a spreadsheet: <strong>export → edit → import</strong>.
+          The products &amp; prices on your public page, grouped by category. Edit items below, or update
+          the whole list in a spreadsheet: <strong>export → edit → import</strong>.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button className="btn-outline" onClick={() => downloadCSV('stand-list-sample.csv', toCSV(SAMPLE))}>
-            ⬇ Sample CSV
-          </button>
-          <button className="btn-outline" onClick={exportCurrent} disabled={!products.length}>
-            ⬇ Export current
-          </button>
-          <button className="btn-primary" onClick={() => fileRef.current?.click()}>
-            ⬆ Import CSV
-          </button>
+          <button className="btn-outline" onClick={() => downloadCSV('stand-list-sample.csv', toCSV(SAMPLE))}>⬇ Sample CSV</button>
+          <button className="btn-outline" onClick={exportCurrent} disabled={!products.length}>⬇ Export current</button>
+          <button className="btn-primary" onClick={() => fileRef.current?.click()}>⬆ Import CSV</button>
           <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
         </div>
         {error && <p className="mt-3 text-sm text-status-alert">{error}</p>}
@@ -181,7 +195,7 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
 
         {adding && (
           <div className="mt-3">
-            <ProductEditor initial={EMPTY} submitLabel="Add item" busy={busy} onSubmit={add} onCancel={() => setAdding(false)} />
+            <ProductEditor initial={EMPTY} submitLabel="Add item" busy={busy} categories={categories} onRequestCategory={requestCat} onSubmit={add} onCancel={() => setAdding(false)} />
           </div>
         )}
 
@@ -190,9 +204,16 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
         ) : products.length === 0 ? (
           <p className="mt-2 text-sm text-brand-muted">No items yet — add one above or import a CSV.</p>
         ) : (
-          <div className="mt-3 space-y-2">
-            {products.map((p) => (
-              <ProductRow key={p.id} product={p} onChanged={reload} />
+          <div className="mt-4 space-y-5">
+            {groupKeys.map((cat) => (
+              <div key={cat}>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">{cat}</h4>
+                <div className="space-y-2">
+                  {groups.get(cat)!.map((p) => (
+                    <ProductRow key={p.id} product={p} categories={categories} onRequestCategory={requestCat} onChanged={reload} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -201,7 +222,17 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
   );
 }
 
-function ProductRow({ product, onChanged }: { product: VendorProduct; onChanged: () => void }) {
+function ProductRow({
+  product,
+  categories,
+  onRequestCategory,
+  onChanged,
+}: {
+  product: VendorProduct;
+  categories: ProductCategory[];
+  onRequestCategory: (name: string) => Promise<void>;
+  onChanged: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -232,6 +263,8 @@ function ProductRow({ product, onChanged }: { product: VendorProduct; onChanged:
         }}
         submitLabel="Save"
         busy={busy}
+        categories={categories}
+        onRequestCategory={onRequestCategory}
         onSubmit={save}
         onCancel={() => setEditing(false)}
       />
@@ -243,7 +276,6 @@ function ProductRow({ product, onChanged }: { product: VendorProduct; onChanged:
       <span className={product.in_season ? 'text-brand-ink' : 'text-brand-muted'}>
         {product.name}
         {!product.in_season && <span className="ml-2 text-xs">(out of season)</span>}
-        {product.category && <span className="ml-2 text-xs text-brand-muted">· {product.category}</span>}
       </span>
       <div className="flex items-center gap-3">
         <span className="font-medium text-brand-primary-dark">{formatPrice(product.price_cents, product.unit)}</span>
@@ -258,12 +290,16 @@ function ProductEditor({
   initial,
   submitLabel,
   busy,
+  categories,
+  onRequestCategory,
   onSubmit,
   onCancel,
 }: {
   initial: EditorValues;
   submitLabel: string;
   busy: boolean;
+  categories: ProductCategory[];
+  onRequestCategory: (name: string) => Promise<void>;
   onSubmit: (v: EditorValues) => void;
   onCancel: () => void;
 }) {
@@ -272,6 +308,22 @@ function ProductEditor({
   const [unit, setUnit] = useState(initial.unit);
   const [price, setPrice] = useState(initial.price);
   const [inSeason, setInSeason] = useState(initial.in_season);
+  const [addingCat, setAddingCat] = useState(false);
+  const [newCat, setNewCat] = useState('');
+  const [reqBusy, setReqBusy] = useState(false);
+
+  const known = categories.some((c) => c.name === category);
+
+  async function requestNew() {
+    const n = newCat.trim();
+    if (!n) return;
+    setReqBusy(true);
+    await onRequestCategory(n);
+    setReqBusy(false);
+    setCategory(n);
+    setNewCat('');
+    setAddingCat(false);
+  }
 
   return (
     <div className="rounded-xl border border-brand-accent bg-brand-paper p-4">
@@ -282,7 +334,21 @@ function ProductEditor({
         </label>
         <label className="block">
           <span className="field-label">Category</span>
-          <input className="field-input" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Vegetable" />
+          <select
+            className="field-input"
+            value={category}
+            onChange={(e) => (e.target.value === '__add__' ? setAddingCat(true) : setCategory(e.target.value))}
+          >
+            <option value="">— none —</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name}
+                {c.status === 'pending' ? ' (pending review)' : ''}
+              </option>
+            ))}
+            {category && !known && <option value={category}>{category}</option>}
+            <option value="__add__">+ Add new category…</option>
+          </select>
         </label>
         <label className="block">
           <span className="field-label">Unit</span>
@@ -306,12 +372,25 @@ function ProductEditor({
           </button>
         </div>
       </div>
+
+      {addingCat && (
+        <div className="mt-3 rounded-lg border border-brand-line bg-brand-card p-3">
+          <span className="field-label">New category name</span>
+          <div className="mt-1 flex flex-wrap gap-2">
+            <input className="field-input mt-0 min-w-[12rem] flex-1" value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="e.g. Pickles & Ferments" />
+            <button className="btn-primary" disabled={reqBusy || !newCat.trim()} onClick={requestNew}>
+              {reqBusy ? 'Sending…' : 'Request'}
+            </button>
+            <button className="btn-ghost" onClick={() => setAddingCat(false)}>Cancel</button>
+          </div>
+          <p className="mt-1 text-xs text-brand-muted">
+            New categories are sent to the market admin for approval — you can use it on this item right away.
+          </p>
+        </div>
+      )}
+
       <div className="mt-3 flex gap-2">
-        <button
-          className="btn-primary"
-          disabled={busy || !name.trim()}
-          onClick={() => onSubmit({ name, category, unit, price, in_season: inSeason })}
-        >
+        <button className="btn-primary" disabled={busy || !name.trim()} onClick={() => onSubmit({ name, category, unit, price, in_season: inSeason })}>
           {busy ? 'Saving…' : submitLabel}
         </button>
         <button className="btn-ghost" disabled={busy} onClick={onCancel}>Cancel</button>

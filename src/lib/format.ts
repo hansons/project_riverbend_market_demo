@@ -69,3 +69,17 @@ const VENDOR_STATUS: Record<string, { label: string; className: string }> = {
 
 export const vendorStatusStyle = (status: string) =>
   VENDOR_STATUS[status] ?? { label: status, className: 'bg-brand-paper text-brand-muted' };
+
+const EVENT_CATEGORY_EMOJI: Record<string, string> = {
+  Gardening: '🌱',
+  Kids: '🧒',
+  Education: '📚',
+  Food: '🍳',
+  Music: '🎶',
+  Health: '🩺',
+  Community: '🤝',
+  Art: '🎨',
+};
+
+export const eventCategoryEmoji = (category: string | null): string =>
+  (category && EVENT_CATEGORY_EMOJI[category]) || '📣';

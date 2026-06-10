@@ -3,6 +3,7 @@ import type {
   Announcement,
   AnnouncementAudience,
   Market,
+  MarketEvent,
   SeasonItem,
   Vendor,
   VendorOffering,
@@ -17,6 +18,17 @@ export async function fetchMarkets(): Promise<Market[]> {
   if (!isSupabaseConfigured) return [];
   const { data } = await supabase.from('markets').select('*').order('sort');
   return (data as Market[]) ?? [];
+}
+
+/** Upcoming community events (on/after `fromISO`), with their market joined. */
+export async function fetchUpcomingEvents(fromISO: string): Promise<MarketEvent[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data } = await supabase
+    .from('events')
+    .select('*, markets(name, day_of_week)')
+    .gte('date', fromISO)
+    .order('date');
+  return (data as unknown as MarketEvent[]) ?? [];
 }
 
 export async function fetchVendors(): Promise<Vendor[]> {

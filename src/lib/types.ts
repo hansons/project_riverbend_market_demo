@@ -54,6 +54,17 @@ export interface Market {
   sort: number;
 }
 
+export interface MarketEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  date: string;
+  market_id: string | null;
+  category: string | null;
+  featured: boolean;
+  markets?: { name: string; day_of_week: string } | null; // joined
+}
+
 export interface Vendor {
   id: string;
   slug: string;

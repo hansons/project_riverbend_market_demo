@@ -3,6 +3,7 @@ import type {
   Announcement,
   AnnouncementAudience,
   Fee,
+  MarketEvent,
   ProductCategory,
   ScheduleStatus,
   ScheduleWithVendor,
@@ -80,6 +81,36 @@ export async function approveCategory(id: string): Promise<string | null> {
 
 export async function deleteCategory(id: string): Promise<string | null> {
   const { error } = await supabase.from('product_categories').delete().eq('id', id);
+  return error?.message ?? null;
+}
+
+// ── Events ──
+export interface EventInput {
+  title: string;
+  description: string | null;
+  date: string;
+  market_id: string | null;
+  category: string | null;
+  featured: boolean;
+}
+
+export async function fetchAllEvents(): Promise<MarketEvent[]> {
+  const { data } = await supabase.from('events').select('*, markets(name, day_of_week)').order('date');
+  return (data as unknown as MarketEvent[]) ?? [];
+}
+
+export async function createEvent(e: EventInput): Promise<string | null> {
+  const { error } = await supabase.from('events').insert(e);
+  return error?.message ?? null;
+}
+
+export async function updateEvent(id: string, patch: Partial<EventInput>): Promise<string | null> {
+  const { error } = await supabase.from('events').update(patch).eq('id', id);
+  return error?.message ?? null;
+}
+
+export async function deleteEvent(id: string): Promise<string | null> {
+  const { error } = await supabase.from('events').delete().eq('id', id);
   return error?.message ?? null;
 }
 

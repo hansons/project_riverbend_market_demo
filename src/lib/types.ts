@@ -28,6 +28,7 @@ export interface Tenant {
   is_active: boolean;
   logo_url: string | null;
   favicon_url: string | null;
+  banner_url: string | null;
 }
 
 export interface Theme {

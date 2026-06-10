@@ -40,14 +40,26 @@ export function PublicHome() {
 
   return (
     <div>
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-brand-line bg-gradient-to-b from-brand-primary/8 to-brand-paper">
-        <div className="mx-auto max-w-content px-4 py-16 sm:py-20">
-          <p className="eyebrow">{tenant.region ?? 'Your local market'}</p>
+      {/* Hero — admin's banner photo when set, otherwise the brand gradient. */}
+      <section
+        className={`relative overflow-hidden border-b border-brand-line ${
+          tenant.banner_url ? 'bg-brand-ink' : 'bg-gradient-to-b from-brand-primary/8 to-brand-paper'
+        }`}
+      >
+        {tenant.banner_url && (
+          <>
+            <img src={tenant.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/45 to-black/25" />
+          </>
+        )}
+        <div className={`relative mx-auto max-w-content px-4 py-16 sm:py-20 ${tenant.banner_url ? 'text-white' : ''}`}>
+          <p className={tenant.banner_url ? 'eyebrow text-white/80' : 'eyebrow'}>
+            {tenant.region ?? 'Your local market'}
+          </p>
           <h1 className="mt-2 max-w-3xl text-4xl leading-tight sm:text-5xl">
             {tenant.tagline ?? 'Fresh from the field, every week.'}
           </h1>
-          <p className="mt-4 max-w-xl text-lg text-brand-muted">
+          <p className={`mt-4 max-w-xl text-lg ${tenant.banner_url ? 'text-white/90' : 'text-brand-muted'}`}>
             Meet the farmers, bakers, and makers behind {tenant.name}. See what’s in season, then come
             say hello.
           </p>
@@ -55,12 +67,15 @@ export function PublicHome() {
             <button onClick={() => navigate('/vendors')} className="btn-primary">
               Meet the vendors
             </button>
-            <button onClick={() => navigate('/markets')} className="btn-outline">
+            <button
+              onClick={() => navigate('/markets')}
+              className={tenant.banner_url ? 'btn-outline border-white/70 text-white hover:bg-white/10' : 'btn-outline'}
+            >
               Plan your visit
             </button>
           </div>
           {nextMarket && (
-            <p className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-card px-3 py-1.5 text-sm shadow-card">
+            <p className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-card px-3 py-1.5 text-sm text-brand-ink shadow-card">
               <span className="h-2 w-2 rounded-full bg-status-ok" />
               Next up: <span className="font-semibold">{nextMarket.name}</span> ·{' '}
               {nextMarket.day_of_week} {nextMarket.hours}

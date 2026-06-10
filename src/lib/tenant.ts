@@ -24,6 +24,7 @@ export const FALLBACK_TENANT: Tenant = {
   },
   logo_url: null,
   favicon_url: null,
+  banner_url: null,
 };
 
 export async function fetchActiveTenant(): Promise<Tenant> {
@@ -57,13 +58,14 @@ export async function applyThemeToActive(brand: Partial<Brand>): Promise<string 
   return error?.message ?? null;
 }
 
-/** Upload a market logo/favicon (admin) → WebP in the shared bucket; returns its public URL. */
+/** Upload a market logo/favicon/banner (admin) → WebP in the shared bucket; returns its public URL. */
 export async function uploadMarketAsset(
   file: File,
-  kind: 'logo' | 'favicon',
+  kind: 'logo' | 'favicon' | 'banner',
 ): Promise<{ url: string } | { error: string }> {
   if (!isSupabaseConfigured) return { error: 'Supabase not configured' };
-  const blob = await toWebp(file, kind === 'favicon' ? 96 : 480, 0.9);
+  const maxDim = kind === 'favicon' ? 96 : kind === 'banner' ? 1600 : 480;
+  const blob = await toWebp(file, maxDim, kind === 'banner' ? 0.82 : 0.9);
   const path = `market/${kind}-${Date.now()}.webp`;
   const up = await supabase.storage.from('vendor-photos').upload(path, blob, {
     contentType: 'image/webp',
@@ -77,6 +79,7 @@ export async function uploadMarketAsset(
 export async function updateMarketBranding(patch: {
   logo_url?: string | null;
   favicon_url?: string | null;
+  banner_url?: string | null;
 }): Promise<string | null> {
   if (!isSupabaseConfigured) return 'Supabase not configured';
   const { error } = await supabase.from('tenants').update(patch).eq('is_active', true);

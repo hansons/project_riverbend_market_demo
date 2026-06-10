@@ -130,7 +130,7 @@ export function VendorDetail({ slug }: { slug: string }) {
                 href={`mailto:${vendor.email}`}
                 className="btn-outline mt-4 w-full"
               >
-                Contact {vendor.name.split(' ')[0]}
+                Contact {vendor.name}
               </a>
             )}
           </div>

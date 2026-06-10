@@ -74,6 +74,22 @@ export async function fetchVendors(): Promise<Vendor[]> {
   return (data as Vendor[]) ?? [];
 }
 
+/** Vendors explicitly scheduled to be featured for the applicable week (latest week_of ≤ reference). */
+export async function fetchFeaturedForWeek(reference: string): Promise<Vendor[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data } = await supabase
+    .from('featured_schedule')
+    .select('week_of, vendors(*)')
+    .lte('week_of', reference)
+    .order('week_of', { ascending: false });
+  const rows = (data as unknown as { week_of: string; vendors: Vendor | null }[]) ?? [];
+  if (!rows.length) return [];
+  const latest = rows[0].week_of;
+  return rows
+    .filter((r) => r.week_of === latest && r.vendors && r.vendors.status === 'active')
+    .map((r) => r.vendors as Vendor);
+}
+
 export async function fetchVendorBySlug(slug: string): Promise<Vendor | null> {
   if (!isSupabaseConfigured) return null;
   const { data } = await supabase.from('vendors').select('*').eq('slug', slug).maybeSingle();

@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type {
   Announcement,
   AnnouncementAudience,
+  FeaturedScheduleRow,
   Fee,
   MarketEvent,
   ProductCategory,
@@ -27,6 +28,27 @@ export async function setVendorStatus(id: string, status: VendorStatus): Promise
 
 export async function setVendorFeatured(id: string, featured: boolean): Promise<string | null> {
   const { error } = await supabase.from('vendors').update({ featured }).eq('id', id);
+  return error?.message ?? null;
+}
+
+// ── Featured spotlight schedule ──
+export async function fetchFeaturedSchedule(): Promise<FeaturedScheduleRow[]> {
+  const { data } = await supabase
+    .from('featured_schedule')
+    .select('id, vendor_id, week_of, vendors(name, category)')
+    .order('week_of');
+  return (data as unknown as FeaturedScheduleRow[]) ?? [];
+}
+
+export async function addFeaturedWeek(vendorId: string, weekOf: string): Promise<string | null> {
+  const { error } = await supabase
+    .from('featured_schedule')
+    .upsert({ vendor_id: vendorId, week_of: weekOf }, { onConflict: 'vendor_id,week_of' });
+  return error?.message ?? null;
+}
+
+export async function removeFeaturedWeek(id: string): Promise<string | null> {
+  const { error } = await supabase.from('featured_schedule').delete().eq('id', id);
   return error?.message ?? null;
 }
 

@@ -138,6 +138,13 @@ export interface VendorScheduleRow {
   note: string | null;
 }
 
+export interface FeaturedScheduleRow {
+  id: string;
+  vendor_id: string;
+  week_of: string;
+  vendors?: { name: string; category: string } | null; // joined
+}
+
 export interface Fee {
   id: string;
   vendor_id: string;

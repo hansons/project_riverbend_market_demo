@@ -1,4 +1,4 @@
-import { fetchVendors, fetchMarkets, fetchCurrentOfferings, fetchUpcomingEvents } from '@/lib/data';
+import { fetchVendors, fetchMarkets, fetchCurrentOfferings, fetchUpcomingEvents, fetchFeaturedForWeek } from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
 import { useTheme } from '@/theme/ThemeProvider';
 import { navigate } from '@/lib/router';
@@ -26,7 +26,9 @@ export function PublicHome() {
   const reference = thisSaturdayISO();
   const { data: fresh } = useAsync(() => fetchCurrentOfferings(reference), [], []);
   const { data: events } = useAsync<MarketEvent[]>(() => fetchUpcomingEvents(todayISO()), [], []);
-  const featured = pickWeeklyFeatured(vendors.filter((v) => v.featured));
+  const { data: scheduledFeatured } = useAsync<Vendor[]>(() => fetchFeaturedForWeek(reference), [], []);
+  // Scheduled spotlight wins for the week; otherwise auto-rotate the starred pool.
+  const featured = scheduledFeatured.length ? scheduledFeatured : pickWeeklyFeatured(vendors.filter((v) => v.featured));
   const upcomingEvents = events.slice(0, 3);
   const nextMarket = markets[0];
 
@@ -125,7 +127,7 @@ export function PublicHome() {
         <section className="mx-auto max-w-content px-4 py-12">
           <div className="mb-5 flex items-end justify-between">
             <div>
-              <p className="eyebrow">Spotlight · rotates weekly</p>
+              <p className="eyebrow">Spotlight this week</p>
               <h2 className="text-2xl">Featured this week</h2>
             </div>
             <button onClick={() => navigate('/vendors')} className="btn-ghost">

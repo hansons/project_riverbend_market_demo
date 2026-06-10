@@ -14,11 +14,19 @@ import { MarketMap } from '@/components/MarketMap';
 
 const TOTAL_STALLS = 48; // A–D × 12
 
+function todayISO(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
+
 export function AdminStalls() {
   const { data: dates } = useAsync(fetchMarketDates, [], []);
   const { data: allVendors } = useAsync(fetchAllVendors, [], []);
   const [picked, setPicked] = useState('');
-  const dateId = picked || dates[0]?.id || '';
+  // Past dates stay in `dates` (they're copy sources) but aren't shown in the picker.
+  const today = todayISO();
+  const upcomingDates = dates.filter((d) => d.date >= today);
+  const dateId = picked || upcomingDates[0]?.id || dates[0]?.id || '';
   const { data: rows, loading, reload } = useAsync(
     () => (dateId ? fetchScheduleForDate(dateId) : Promise.resolve([])),
     [dateId],
@@ -103,7 +111,7 @@ export function AdminStalls() {
         <label className="block">
           <span className="field-label">Market day</span>
           <select className="field-input" value={dateId} onChange={(e) => setPicked(e.target.value)}>
-            {dates.map((d) => (
+            {upcomingDates.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.markets?.name} · {formatDate(d.date)}
               </option>

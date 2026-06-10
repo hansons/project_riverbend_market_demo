@@ -34,6 +34,7 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
   const loading = datesLoading || schedLoading;
 
   const today = todayISO();
+  const upcomingDates = dates.filter((d) => d.date >= today);
   const myStops = sched
     .filter((s) => s.status === 'confirmed' && s.stalls.some((st) => /^[A-D]\d+$/.test(st)))
     .map((s) => ({ s, d: dates.find((x) => x.id === s.market_date_id) }))
@@ -59,11 +60,11 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
 
       {loading ? (
         <div className="mt-5 h-40 animate-pulse rounded-xl bg-brand-paper" />
-      ) : dates.length === 0 ? (
+      ) : upcomingDates.length === 0 ? (
         <p className="mt-4 text-sm text-brand-muted">No upcoming dates scheduled.</p>
       ) : (
         <ul className="mt-5 divide-y divide-brand-line">
-          {dates.map((d) => {
+          {upcomingDates.map((d) => {
             const row = byDate.get(d.id);
             const status = (row?.status ?? 'none') as ScheduleStatus | 'none';
             const pill = STATUS_PILL[status];

@@ -93,7 +93,7 @@ export function VendorOfferings({ vendor }: { vendor: Vendor }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="card p-6">
         <h2 className="text-xl">Post this week’s “what I have”</h2>
         <p className="mt-1 text-sm text-brand-muted">Let shoppers know what you’re bringing.</p>
@@ -125,7 +125,7 @@ export function VendorOfferings({ vendor }: { vendor: Vendor }) {
         </div>
       </div>
 
-      <div className="card p-6">
+      <div className="card p-6 order-last">
         <h3 className="text-lg">Bulk import / export</h3>
         <p className="mt-1 text-sm text-brand-muted">
           Plan several weeks in a spreadsheet, then import them. (Put all items in the one

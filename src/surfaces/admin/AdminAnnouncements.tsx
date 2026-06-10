@@ -98,7 +98,7 @@ export function AdminAnnouncements() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="card p-6">
         <h2 className="text-xl">Post an announcement</h2>
         <p className="mt-1 text-sm text-brand-muted">
@@ -120,7 +120,7 @@ export function AdminAnnouncements() {
         </div>
       </div>
 
-      <div className="card p-6">
+      <div className="card p-6 order-last">
         <h3 className="text-lg">Bulk import / export</h3>
         <p className="mt-1 text-sm text-brand-muted">
           Draft a batch of announcements in a spreadsheet, then import them. Columns:{' '}

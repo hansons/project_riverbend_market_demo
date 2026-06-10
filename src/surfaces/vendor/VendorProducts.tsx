@@ -135,14 +135,22 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
   );
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5">
       <div className="card p-6">
         <h2 className="text-xl">Stand list</h2>
         <p className="mt-1 text-sm text-brand-muted">
           The products &amp; prices on your public page, grouped by category. Edit items below, or update
-          the whole list in a spreadsheet: <strong>export → edit → import</strong>.
+          the whole list in a spreadsheet — see <strong>Import / export</strong> at the bottom.
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
+      </div>
+
+      {/* CSV import/export — ordered to the bottom so day-to-day editing stays on top. */}
+      <div className="card p-6 order-last">
+        <h3 className="text-lg">Import / export</h3>
+        <p className="mt-1 text-sm text-brand-muted">
+          Update your whole stand list in a spreadsheet: <strong>export → edit → import</strong>.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
           <button className="btn-outline" onClick={() => downloadCSV('stand-list-sample.csv', toCSV(SAMPLE))}>⬇ Sample CSV</button>
           <button className="btn-outline" onClick={exportCurrent} disabled={!products.length}>⬇ Export current</button>
           <button className="btn-primary" onClick={() => fileRef.current?.click()}>⬆ Import CSV</button>
@@ -152,7 +160,7 @@ export function VendorProducts({ vendor }: { vendor: Vendor }) {
       </div>
 
       {preview && (
-        <div className="card border-brand-accent p-6">
+        <div className="card border-brand-accent p-6 order-last">
           <p className="font-semibold text-brand-primary-dark">
             Import preview — {preview.length} item{preview.length === 1 ? '' : 's'}
           </p>

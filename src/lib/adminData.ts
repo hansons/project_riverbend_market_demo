@@ -215,6 +215,13 @@ export async function deleteEvent(id: string): Promise<string | null> {
   return error?.message ?? null;
 }
 
+/** Bulk add events from a CSV import. */
+export async function addEventsBulk(events: EventInput[]): Promise<string | null> {
+  if (!events.length) return null;
+  const { error } = await supabase.from('events').insert(events);
+  return error?.message ?? null;
+}
+
 // ── Reports ──
 export async function fetchAllFees(): Promise<Fee[]> {
   const { data } = await supabase.from('fees').select('*');

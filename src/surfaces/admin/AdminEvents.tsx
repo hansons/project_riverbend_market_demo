@@ -1,11 +1,28 @@
 import { useState } from 'react';
-import { createEvent, deleteEvent, fetchAllEvents, updateEvent, type EventInput } from '@/lib/adminData';
+import {
+  addEventsBulk,
+  createEvent,
+  deleteEvent,
+  fetchAllEvents,
+  updateEvent,
+  type EventInput,
+} from '@/lib/adminData';
 import { fetchMarkets } from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
+import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
+import { CsvToolbar } from '@/components/CsvToolbar';
 import { eventCategoryEmoji, formatDate } from '@/lib/format';
 import type { Market, MarketEvent } from '@/lib/types';
 
 const CATEGORIES = ['Gardening', 'Kids', 'Education', 'Food', 'Music', 'Health', 'Community', 'Art'];
+
+const CSV_HEADER = ['title', 'date', 'market', 'category', 'featured', 'description'];
+const CSV_SAMPLE: string[][] = [
+  CSV_HEADER,
+  ['Master Gardeners — Let’s Talk Plants', '2026-06-13', 'Saturday Market', 'Gardening', 'true', 'On-the-spot gardening advice.'],
+  ['Live Music — The Cedar Sisters', '2026-07-04', 'Saturday Market', 'Music', 'false', 'Tunes on the main stage, 10am–noon.'],
+];
+const TRUTHY = new Set(['true', '1', 'yes', 'y', 'on']);
 
 interface EVals {
   title: string;
@@ -33,6 +50,8 @@ export function AdminEvents() {
   const { data: markets } = useAsync(fetchMarkets, [], []);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<EventInput[] | null>(null);
 
   async function add(v: EVals) {
     setBusy(true);
@@ -40,6 +59,60 @@ export function AdminEvents() {
     setBusy(false);
     setAdding(false);
     reload();
+  }
+
+  function exportEvents() {
+    const rows = [
+      CSV_HEADER,
+      ...events.map((e) => [
+        e.title,
+        e.date,
+        e.markets?.name ?? '',
+        e.category ?? '',
+        e.featured ? 'true' : 'false',
+        e.description ?? '',
+      ]),
+    ];
+    downloadCSV('riverbend-events.csv', toCSV(rows));
+  }
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    const rows: EventInput[] = [];
+    for (const r of parseCSVObjects(await file.text())) {
+      const title = (r.title ?? '').trim();
+      const date = (r.date ?? '').trim();
+      if (!title || !date) continue;
+      const marketName = (r.market ?? '').trim().toLowerCase();
+      const market = marketName ? markets.find((m) => m.name.toLowerCase() === marketName) : undefined;
+      rows.push({
+        title,
+        date,
+        market_id: market?.id ?? null,
+        category: (r.category ?? '').trim() || null,
+        featured: TRUTHY.has((r.featured ?? '').trim().toLowerCase()),
+        description: (r.description ?? '').trim() || null,
+      });
+    }
+    if (!rows.length) {
+      setError('No rows with a title + date found. Header: title, date, market, category, featured, description.');
+      return;
+    }
+    setPreview(rows);
+  }
+
+  async function applyImport() {
+    if (!preview) return;
+    setBusy(true);
+    const err = await addEventsBulk(preview);
+    setBusy(false);
+    if (err) setError(err);
+    else {
+      setPreview(null);
+      reload();
+    }
   }
 
   const empty: EVals = { title: '', description: '', date: todayISO(), market_id: markets[0]?.id ?? '', category: CATEGORIES[0], featured: false };
@@ -53,10 +126,43 @@ export function AdminEvents() {
             Community happenings on the public Events page — demos, workshops, kids’ activities, partners.
           </p>
         </div>
-        {!adding && (
-          <button className="btn-outline px-3 py-1.5 text-sm" onClick={() => setAdding(true)}>+ Add event</button>
-        )}
+        <div className="flex items-center gap-2">
+          <CsvToolbar
+            onSample={() => downloadCSV('events-sample.csv', toCSV(CSV_SAMPLE))}
+            onExport={exportEvents}
+            onImport={onFile}
+            exportDisabled={!events.length}
+          />
+          {!adding && (
+            <button className="btn-outline px-3 py-1.5 text-sm" onClick={() => setAdding(true)}>+ Add event</button>
+          )}
+        </div>
       </div>
+
+      {error && <p className="text-sm text-status-alert">{error}</p>}
+
+      {preview && (
+        <div className="card border-brand-accent p-5">
+          <p className="font-semibold text-brand-primary-dark">
+            Add {preview.length} event{preview.length === 1 ? '' : 's'}?
+          </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {preview.slice(0, 12).map((ev, i) => (
+              <li key={i} className="text-brand-ink">
+                <span className="text-brand-muted">{formatDate(ev.date)}:</span> {ev.title}
+                {ev.category && <span className="ml-1 text-xs text-brand-accent">{ev.category}</span>}
+              </li>
+            ))}
+            {preview.length > 12 && <li className="text-xs text-brand-muted">…and {preview.length - 12} more</li>}
+          </ul>
+          <div className="mt-3 flex gap-2">
+            <button className="btn-primary" onClick={applyImport} disabled={busy}>
+              {busy ? 'Adding…' : 'Add events'}
+            </button>
+            <button className="btn-ghost" onClick={() => setPreview(null)} disabled={busy}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {adding && <EventEditor initial={empty} submitLabel="Add event" busy={busy} markets={markets} onSubmit={add} onCancel={() => setAdding(false)} />}
 

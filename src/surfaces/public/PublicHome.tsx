@@ -95,7 +95,8 @@ export function PublicHome() {
         <SeasonStrip />
       </section>
 
-      {/* Fresh this Saturday — vendors' own weekly posts, auto-selected by date */}
+      {/* Fresh this Saturday — vendors' own weekly posts, auto-selected by date.
+          Each card is backed by that vendor's own cover photo at low opacity. */}
       {freshItems.length > 0 && (
         <section className="mx-auto max-w-content px-4 pb-4">
           <div className="mb-5">
@@ -107,17 +108,26 @@ export function PublicHome() {
               <button
                 key={o.id}
                 onClick={() => navigate(`/vendor/${vendor.slug}`)}
-                className="card p-4 text-left transition hover:shadow-lift"
+                className="relative overflow-hidden rounded-2xl border border-brand-line bg-brand-card p-4 text-left shadow-card transition hover:shadow-lift"
               >
-                <p className="font-semibold text-brand-primary-dark">{vendor.name}</p>
-                <p className="text-sm text-brand-ink">{o.headline ?? 'Bringing this week'}</p>
-                {o.items.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {o.items.slice(0, 5).map((it) => (
-                      <span key={it} className="chip">{it}</span>
-                    ))}
-                  </div>
+                {vendor.image_url && (
+                  <>
+                    <img src={vendor.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                    {/* slight transparency: soften the vendor's photo so the text stays readable */}
+                    <div className="absolute inset-0 bg-brand-card/80" />
+                  </>
                 )}
+                <div className="relative">
+                  <p className="font-semibold text-brand-primary-dark">{vendor.name}</p>
+                  <p className="text-sm text-brand-ink">{o.headline ?? 'Bringing this week'}</p>
+                  {o.items.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {o.items.slice(0, 5).map((it) => (
+                        <span key={it} className="chip">{it}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </button>
             ))}
           </div>

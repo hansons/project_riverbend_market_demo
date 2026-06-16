@@ -5,6 +5,7 @@ import type {
   FeaturedScheduleRow,
   Fee,
   MarketEvent,
+  Profile,
   ProductCategory,
   ScheduleStatus,
   ScheduleWithVendor,
@@ -29,6 +30,16 @@ export async function setVendorStatus(id: string, status: VendorStatus): Promise
 export async function setVendorFeatured(id: string, featured: boolean): Promise<string | null> {
   const { error } = await supabase.from('vendors').update({ featured }).eq('id', id);
   return error?.message ?? null;
+}
+
+// ── Administrators (read-only list; provisioning not yet wired) ──
+export async function fetchAdmins(): Promise<Profile[]> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('*')
+    .in('role', ['admin', 'superadmin'])
+    .order('full_name');
+  return (data as Profile[]) ?? [];
 }
 
 // ── Featured spotlight schedule ──

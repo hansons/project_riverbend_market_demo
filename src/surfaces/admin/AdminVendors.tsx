@@ -4,7 +4,7 @@ import { useAsync } from '@/lib/useAsync';
 import { useHotkey } from '@/lib/useKeyNav';
 import { notifyVendorApproved } from '@/lib/push';
 import { categoryEmoji, vendorStatusStyle } from '@/lib/format';
-import type { VendorStatus } from '@/lib/types';
+import type { Vendor, VendorStatus } from '@/lib/types';
 
 const FILTERS: (VendorStatus | 'all')[] = ['all', 'active', 'pending', 'suspended'];
 
@@ -15,6 +15,14 @@ export function AdminVendors() {
   const [busy, setBusy] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   useHotkey(['/'], () => searchRef.current?.focus()); // "/" jumps to search
+  const [invited, setInvited] = useState<Set<string>>(() => new Set());
+
+  // Portal access invite — appears available; provisioning not yet wired, so the
+  // invited state is front-end only (mirrors the Administrators feature).
+  function invite(v: Vendor) {
+    if (!v.email) return;
+    setInvited((cur) => new Set(cur).add(v.id));
+  }
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: vendors.length };
@@ -40,7 +48,11 @@ export function AdminVendors() {
   return (
     <div>
       <h2 className="text-xl">Vendors</h2>
-      <p className="mt-1 text-sm text-brand-muted">The full roster — only admins can see suspended/pending rows.</p>
+      <p className="mt-1 text-sm text-brand-muted">
+        The full roster — only admins can see suspended/pending rows. Invite an active vendor to the
+        portal to let them manage their own listing (photos, profile, offerings); access activates once
+        provisioning is enabled.
+      </p>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-1.5">
@@ -74,8 +86,23 @@ export function AdminVendors() {
                   </p>
                   <p className="text-xs text-brand-muted">{v.category} · {v.town ?? '—'}</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${style.className}`}>{style.label}</span>
+                  {v.status === 'active' &&
+                    (invited.has(v.id) ? (
+                      <span className="rounded-full bg-status-warn/15 px-2 py-0.5 text-xs font-semibold text-brand-berry">
+                        Access invited
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => invite(v)}
+                        disabled={!v.email}
+                        title={v.email ? 'Send this vendor portal access' : 'Add an email to invite'}
+                        className="rounded-lg border border-brand-line px-3 py-1 text-sm font-semibold hover:bg-brand-paper disabled:opacity-40"
+                      >
+                        Invite to portal
+                      </button>
+                    ))}
                   {v.status !== 'active' ? (
                     <button onClick={() => setStatus(v.id, 'active')} disabled={busy === v.id} className="rounded-lg border border-brand-line px-3 py-1 text-sm font-semibold hover:bg-brand-paper">
                       Activate

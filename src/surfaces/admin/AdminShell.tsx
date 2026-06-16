@@ -15,6 +15,7 @@ import { AdminTokens } from './AdminTokens';
 import { AdminAttendance } from './AdminAttendance';
 import { AdminAppearance } from './AdminAppearance';
 import { AdminReports } from './AdminReports';
+import { AdminTeam } from './AdminTeam';
 
 export type AdminSection =
   | 'dashboard'
@@ -29,7 +30,8 @@ export type AdminSection =
   | 'announcements'
   | 'events'
   | 'appearance'
-  | 'reports';
+  | 'reports'
+  | 'admins';
 
 const SECTIONS: { key: AdminSection; label: string; icon: string }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
@@ -45,6 +47,7 @@ const SECTIONS: { key: AdminSection; label: string; icon: string }[] = [
   { key: 'events', label: 'Events', icon: '📅' },
   { key: 'appearance', label: 'Appearance', icon: '🎨' },
   { key: 'reports', label: 'Reports', icon: '📊' },
+  { key: 'admins', label: 'Administrators', icon: '🔑' },
 ];
 
 export function AdminShell() {
@@ -105,6 +108,7 @@ export function AdminShell() {
           {section === 'events' && <AdminEvents />}
           {section === 'appearance' && <AdminAppearance />}
           {section === 'reports' && <AdminReports />}
+          {section === 'admins' && <AdminTeam />}
         </div>
       </div>
     </div>

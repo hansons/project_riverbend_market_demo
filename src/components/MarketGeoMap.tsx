@@ -12,8 +12,11 @@ import type { MapOccupant } from './MarketMap';
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const ATTRIB = 'Tiles © Esri, Maxar, Earthstar Geographics';
 
-const H = 1.25 / 111320; // half stall height (~2.5 m)
-const W = 1.5 / 79300; // half stall width (~3 m)
+// Stall footprint as real ground size — geographic rectangles, so they scale with
+// zoom (fill the view up close, shrink when zoomed out). Sized to roughly fill the
+// generated grid spacing (~7 m × 4 m) so the layout reads as a packed market.
+const H = 3 / 111320; // half stall height (~6 m)
+const W = 1.8 / 79300; // half stall width (~3.6 m)
 
 function styleFor(occupied: boolean, highlighted: boolean, disabled: boolean, catColor: string | null, byCategory: boolean): L.PathOptions {
   if (highlighted) {
@@ -55,8 +58,10 @@ export function MarketGeoMap({
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
     const positions = state.current.stalls?.length ? state.current.stalls : generateStallGrid(state.current.center);
-    const map = L.map(elRef.current, { scrollWheelZoom: false });
-    L.tileLayer(ESRI, { maxZoom: 20, attribution: ATTRIB }).addTo(map);
+    const map = L.map(elRef.current, { scrollWheelZoom: false, maxZoom: 22 });
+    // Imagery is native to ~z19; allow zooming to 22 (Leaflet upscales the tiles)
+    // so the stalls can grow to fill the view when you zoom right in.
+    L.tileLayer(ESRI, { maxZoom: 22, maxNativeZoom: 19, attribution: ATTRIB }).addTo(map);
     map.fitBounds(L.latLngBounds(positions.map((p) => [p.lat, p.lng] as [number, number])), { padding: [40, 40], maxZoom: 20 });
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;

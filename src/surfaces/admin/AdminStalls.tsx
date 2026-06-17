@@ -352,6 +352,9 @@ export function AdminStalls() {
                   setMapView(m);
                   setEditingLayout(false);
                   setEditingGridStalls(false);
+                  // Satellite is the shopper/zone view → default it to category colors;
+                  // Grid is the admin assignment view → default to status. Toggle still overrides.
+                  setColorBy(m === 'satellite' ? 'category' : 'status');
                 }}
                 className={[
                   'rounded-full border px-3 py-1 text-sm font-medium transition',

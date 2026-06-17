@@ -89,7 +89,7 @@ export function PublicHome() {
         <div className="mb-5 flex items-end justify-between">
           <div>
             <p className="eyebrow">This week</p>
-            <h2 className="text-2xl">What’s in season</h2>
+            <h2 className="text-2xl">What’s at the market</h2>
           </div>
         </div>
         <SeasonStrip />

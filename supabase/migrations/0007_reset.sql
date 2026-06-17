@@ -19,10 +19,10 @@ begin
   delete from seasonality;
   delete from market_dates;
   delete from markets;
-  -- Drop any vendors a visitor applied for (anything outside the seeded 1–37).
+  -- Drop any vendors a visitor applied for (anything outside the seeded 1–42).
   delete from vendors where id not in (
     select ('a0000000-0000-4000-8000-0000000000' || lpad(g::text, 2, '0'))::uuid
-    from generate_series(1, 37) g
+    from generate_series(1, 42) g
   );
 
   insert into product_categories (name, status, requested_by) values
@@ -34,6 +34,7 @@ begin
     ('Pantry', 'active', null), ('Flowers', 'active', null), ('Plant', 'active', null),
     ('Nuts', 'active', null), ('Grain', 'active', null), ('Body', 'active', null),
     ('Home', 'active', null), ('Confection', 'active', null), ('Pasta', 'active', null),
+    ('Service', 'active', null), ('Art', 'active', null),
     ('Pickles & Ferments', 'pending', 'a0000000-0000-4000-8000-000000000010')
   on conflict (name) do nothing;
 
@@ -267,7 +268,37 @@ begin
      'A hillside orchard growing peaches, apricots, plums, and dozens of heirloom apples with integrated pest management.',
      'Lebanon, OR', '{"IPM","Family orchard"}', '{"Saturday"}',
      'https://images.unsplash.com/photo-1570913149827-d2ac84ab3f9a?auto=format&fit=crop&w=900&q=70',
-     'fruit@honeycrisphill.demo', 'active', false)
+     'fruit@honeycrisphill.demo', 'active', false),
+    ('a0000000-0000-4000-8000-000000000038', 'edge-and-anvil-sharpening', 'Edge & Anvil Sharpening', 'Services',
+     'Knife, scissor & tool sharpening',
+     'A traveling sharpening booth — drop off your kitchen knives, garden tools, and scissors and pick them up razor-sharp before you head home.',
+     'Corvallis, OR', '{"Walk-up","Same-day"}', '{"Saturday"}',
+     null,
+     'sharpen@edgeandanvil.demo', 'active', false),
+    ('a0000000-0000-4000-8000-000000000039', 'riverside-cyclery', 'Riverside Cyclery', 'Services',
+     'Mobile bike tune-ups & repairs',
+     'A pop-up bike shop fixing flats, dialing in brakes, and tuning gears while you shop. Rolling toolkit, no appointment needed.',
+     'Corvallis, OR', '{"Walk-up","Mobile"}', '{"Saturday"}',
+     null,
+     'fix@riversidecyclery.demo', 'active', false),
+    ('a0000000-0000-4000-8000-000000000040', 'stillwater-chair-massage', 'Stillwater Chair Massage', 'Services',
+     'Seated chair massage',
+     'Licensed massage therapists offering 10- to 30-minute seated sessions in the shade. Walk up or add your name to the clipboard.',
+     'Albany, OR', '{"Licensed","Walk-up"}', '{"Saturday","Wednesday"}',
+     null,
+     'relax@stillwatermassage.demo', 'active', false),
+    ('a0000000-0000-4000-8000-000000000041', 'kestrel-studio-prints', 'Kestrel Studio Prints', 'Art & Crafts',
+     'Local art prints & cards',
+     'Hand-pulled linocuts, watercolor prints, and greeting cards of Willamette Valley landscapes and farm life. Originals by commission.',
+     'Philomath, OR', '{"Handmade","Original art"}', '{"Saturday"}',
+     null,
+     'hello@kestrelstudio.demo', 'active', false),
+    ('a0000000-0000-4000-8000-000000000042', 'cascade-tree-farm', 'Cascade Tree Farm', 'Trees & Nursery',
+     'Fruit, shade & native trees',
+     'Bare-root and potted fruit trees, natives, and shade trees raised at a family nursery — with planting advice included at the booth.',
+     'Lebanon, OR', '{"Family-run","Peat-free"}', '{"Saturday"}',
+     null,
+     'trees@cascadetreefarm.demo', 'active', false)
   on conflict (id) do update set
     slug = excluded.slug, name = excluded.name, category = excluded.category,
     tagline = excluded.tagline, story = excluded.story, town = excluded.town,
@@ -599,6 +630,45 @@ begin
     ('a0000000-0000-4000-8000-000000000029', 'June 2026', 'Stall fees',                  6000,  'paid', '2026-06-10'),
     ('a0000000-0000-4000-8000-000000000033', 'June 2026', 'Stall fees',                  9000,  'due',  '2026-06-30'),
     ('a0000000-0000-4000-8000-000000000036', 'June 2026', 'Stall fees — food vendor',    12000, 'due',  '2026-06-30');
+
+  -- ── Service / art / tree vendors (38–42) ──
+  insert into vendor_products (vendor_id, name, category, unit, price_cents, in_season, sort) values
+    ('a0000000-0000-4000-8000-000000000038', 'Knife sharpening', 'Service', 'blade', 600, true, 1),
+    ('a0000000-0000-4000-8000-000000000038', 'Scissor sharpening', 'Service', 'pair', 800, true, 2),
+    ('a0000000-0000-4000-8000-000000000038', 'Garden tool sharpening', 'Service', 'each', 1000, true, 3),
+    ('a0000000-0000-4000-8000-000000000038', 'Axe & hatchet', 'Service', 'each', 1200, true, 4),
+    ('a0000000-0000-4000-8000-000000000039', 'Flat-tire fix', 'Service', 'each', 1500, true, 1),
+    ('a0000000-0000-4000-8000-000000000039', 'Basic tune-up', 'Service', 'each', 4000, true, 2),
+    ('a0000000-0000-4000-8000-000000000039', 'Brake adjustment', 'Service', 'each', 2000, true, 3),
+    ('a0000000-0000-4000-8000-000000000039', 'Chain lube', 'Service', 'each', 800, true, 4),
+    ('a0000000-0000-4000-8000-000000000040', '10-min chair massage', 'Service', 'session', 1500, true, 1),
+    ('a0000000-0000-4000-8000-000000000040', '20-min chair massage', 'Service', 'session', 2800, true, 2),
+    ('a0000000-0000-4000-8000-000000000040', '30-min chair massage', 'Service', 'session', 4000, true, 3),
+    ('a0000000-0000-4000-8000-000000000041', 'Linocut print', 'Art', 'each', 3500, true, 1),
+    ('a0000000-0000-4000-8000-000000000041', 'Watercolor print', 'Art', 'each', 2500, true, 2),
+    ('a0000000-0000-4000-8000-000000000041', 'Greeting cards (set)', 'Art', 'set', 1500, true, 3),
+    ('a0000000-0000-4000-8000-000000000041', 'Original painting', 'Art', 'each', 12000, false, 4),
+    ('a0000000-0000-4000-8000-000000000042', 'Semi-dwarf apple tree', 'Plant', 'each', 3500, true, 1),
+    ('a0000000-0000-4000-8000-000000000042', 'Fruiting fig', 'Plant', 'each', 3000, true, 2),
+    ('a0000000-0000-4000-8000-000000000042', 'Native red maple', 'Plant', 'each', 4000, true, 3),
+    ('a0000000-0000-4000-8000-000000000042', 'Blueberry bush', 'Plant', 'each', 1800, true, 4);
+
+  -- Booths on both Saturdays (free cells C1–C4, D5).
+  insert into vendor_schedule (vendor_id, market_date_id, status, stalls, note) values
+    ('a0000000-0000-4000-8000-000000000038', '33330000-0000-4000-8000-000000000001', 'confirmed', '{C1}', null),
+    ('a0000000-0000-4000-8000-000000000039', '33330000-0000-4000-8000-000000000001', 'confirmed', '{C2}', null),
+    ('a0000000-0000-4000-8000-000000000040', '33330000-0000-4000-8000-000000000001', 'confirmed', '{C3}', null),
+    ('a0000000-0000-4000-8000-000000000041', '33330000-0000-4000-8000-000000000001', 'confirmed', '{C4}', null),
+    ('a0000000-0000-4000-8000-000000000042', '33330000-0000-4000-8000-000000000001', 'confirmed', '{D5}', null),
+    ('a0000000-0000-4000-8000-000000000038', '33330000-0000-4000-8000-000000000002', 'confirmed', '{C1}', null),
+    ('a0000000-0000-4000-8000-000000000039', '33330000-0000-4000-8000-000000000002', 'confirmed', '{C2}', null),
+    ('a0000000-0000-4000-8000-000000000040', '33330000-0000-4000-8000-000000000002', 'confirmed', '{C3}', null),
+    ('a0000000-0000-4000-8000-000000000041', '33330000-0000-4000-8000-000000000002', 'confirmed', '{C4}', null),
+    ('a0000000-0000-4000-8000-000000000042', '33330000-0000-4000-8000-000000000002', 'confirmed', '{D5}', null);
+
+  insert into fees (vendor_id, period, description, amount_cents, status, due_date) values
+    ('a0000000-0000-4000-8000-000000000038', 'June 2026', 'Booth fee', 4000, 'paid', '2026-06-10'),
+    ('a0000000-0000-4000-8000-000000000041', 'June 2026', 'Booth fee', 6000, 'due',  '2026-06-30');
 end $seed$;
 
 -- Internal loader: not callable directly over the API.

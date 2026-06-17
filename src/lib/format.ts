@@ -109,6 +109,9 @@ const CATEGORY_EMOJI: Record<string, string> = {
   Seafood: '🐟',
   'Body & Home': '🧼',
   'Nuts & Grains': '🌰',
+  Services: '🛠️',
+  'Art & Crafts': '🎨',
+  'Trees & Nursery': '🌳',
 };
 
 export const categoryEmoji = (category: string): string => CATEGORY_EMOJI[category] ?? '🧺';

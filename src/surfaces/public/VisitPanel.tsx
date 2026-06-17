@@ -87,45 +87,43 @@ export function VisitPanel() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
-        <div>
-          {loading ? (
-            <div className="h-64 animate-pulse rounded-2xl bg-brand-paper" />
-          ) : view === 'satellite' ? (
-            <MarketGeoMap stalls={data.stalls} highlight={highlight} />
-          ) : (
-            <MarketMap
-              stalls={gridStalls}
-              highlight={highlight}
-              highlightText={selected.length === 1 ? selected[0].vendor.name : undefined}
-            />
-          )}
-        </div>
-        <ul className="divide-y divide-brand-line">
-          {selected.map((s) => (
-            <li key={s.slug} className="flex items-center justify-between gap-2 py-2">
-              <div className="min-w-0">
-                <button
-                  onClick={() => navigate(`/vendor/${s.slug}`)}
-                  className="block max-w-full truncate text-left text-sm font-medium text-brand-ink hover:underline"
-                >
-                  {s.vendor.name}
-                </button>
-                <p className="text-xs text-brand-muted">
-                  {s.stalls.length ? `Stall ${s.stalls.join(', ')}` : 'Stall TBA'}
-                </p>
-              </div>
-              <button
-                onClick={() => visit.remove(s.slug)}
-                title={`Remove ${s.vendor.name}`}
-                className="shrink-0 text-brand-muted transition hover:text-status-alert"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* Full-width map (same presentation as the vendor & admin satellite views). */}
+      {loading ? (
+        <div className="h-64 animate-pulse rounded-2xl bg-brand-paper" />
+      ) : view === 'satellite' ? (
+        <MarketGeoMap stalls={data.stalls} highlight={highlight} />
+      ) : (
+        <MarketMap
+          stalls={gridStalls}
+          highlight={highlight}
+          highlightText={selected.length === 1 ? selected[0].vendor.name : undefined}
+        />
+      )}
+
+      {/* The visit list as compact pills below the map. */}
+      <ul className="mt-3 flex flex-wrap gap-2">
+        {selected.map((s) => (
+          <li
+            key={s.slug}
+            className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-brand-paper px-3 py-1 text-xs"
+          >
+            <button
+              onClick={() => navigate(`/vendor/${s.slug}`)}
+              className="font-medium text-brand-ink hover:underline"
+            >
+              {s.vendor.name}
+            </button>
+            <span className="text-brand-muted">{s.stalls.length ? s.stalls.join(', ') : 'TBA'}</span>
+            <button
+              onClick={() => visit.remove(s.slug)}
+              title={`Remove ${s.vendor.name}`}
+              className="text-brand-muted transition hover:text-status-alert"
+            >
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

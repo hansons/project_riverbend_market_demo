@@ -42,6 +42,13 @@ export async function fetchAdmins(): Promise<Profile[]> {
   return (data as Profile[]) ?? [];
 }
 
+/** Accounts linked to one vendor (its managers). Many profiles may share a
+ *  vendor_id, so a vendor can have several managers. */
+export async function fetchVendorManagers(vendorId: string): Promise<Profile[]> {
+  const { data } = await supabase.from('profiles').select('*').eq('vendor_id', vendorId).order('full_name');
+  return (data as Profile[]) ?? [];
+}
+
 // ── Featured spotlight schedule ──
 export async function fetchFeaturedSchedule(): Promise<FeaturedScheduleRow[]> {
   const { data } = await supabase

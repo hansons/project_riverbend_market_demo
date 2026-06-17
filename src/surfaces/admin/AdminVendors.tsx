@@ -4,7 +4,8 @@ import { useAsync } from '@/lib/useAsync';
 import { useHotkey } from '@/lib/useKeyNav';
 import { notifyVendorApproved } from '@/lib/push';
 import { categoryEmoji, vendorStatusStyle } from '@/lib/format';
-import type { Vendor, VendorStatus } from '@/lib/types';
+import { VendorManagersPanel } from './VendorManagersPanel';
+import type { VendorStatus } from '@/lib/types';
 
 const FILTERS: (VendorStatus | 'all')[] = ['all', 'active', 'pending', 'suspended'];
 
@@ -15,14 +16,7 @@ export function AdminVendors() {
   const [busy, setBusy] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   useHotkey(['/'], () => searchRef.current?.focus()); // "/" jumps to search
-  const [invited, setInvited] = useState<Set<string>>(() => new Set());
-
-  // Portal access invite — appears available; provisioning not yet wired, so the
-  // invited state is front-end only (mirrors the Administrators feature).
-  function invite(v: Vendor) {
-    if (!v.email) return;
-    setInvited((cur) => new Set(cur).add(v.id));
-  }
+  const [openManagers, setOpenManagers] = useState<string | null>(null);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: vendors.length };
@@ -49,8 +43,8 @@ export function AdminVendors() {
     <div>
       <h2 className="text-xl">Vendors</h2>
       <p className="mt-1 text-sm text-brand-muted">
-        The full roster — only admins can see suspended/pending rows. Invite an active vendor to the
-        portal to let them manage their own listing (photos, profile, offerings); access activates once
+        The full roster — only admins can see suspended/pending rows. Open <strong>Managers</strong> on an
+        active vendor to invite the people who run that stand (several allowed); access activates once
         provisioning is enabled.
       </p>
 
@@ -79,40 +73,40 @@ export function AdminVendors() {
           {rows.map((v) => {
             const style = vendorStatusStyle(v.status);
             return (
-              <div key={v.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="font-medium text-brand-ink">
-                    {categoryEmoji(v.category)} {v.name}
-                  </p>
-                  <p className="text-xs text-brand-muted">{v.category} · {v.town ?? '—'}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${style.className}`}>{style.label}</span>
-                  {v.status === 'active' &&
-                    (invited.has(v.id) ? (
-                      <span className="rounded-full bg-status-warn/15 px-2 py-0.5 text-xs font-semibold text-brand-berry">
-                        Access invited
-                      </span>
-                    ) : (
+              <div key={v.id}>
+                <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+                  <div className="min-w-0">
+                    <p className="font-medium text-brand-ink">
+                      {categoryEmoji(v.category)} {v.name}
+                    </p>
+                    <p className="text-xs text-brand-muted">{v.category} · {v.town ?? '—'}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${style.className}`}>{style.label}</span>
+                    {v.status === 'active' && (
                       <button
-                        onClick={() => invite(v)}
-                        disabled={!v.email}
-                        title={v.email ? 'Send this vendor portal access' : 'Add an email to invite'}
-                        className="rounded-lg border border-brand-line px-3 py-1 text-sm font-semibold hover:bg-brand-paper disabled:opacity-40"
+                        onClick={() => setOpenManagers((cur) => (cur === v.id ? null : v.id))}
+                        className="rounded-lg border border-brand-line px-3 py-1 text-sm font-semibold hover:bg-brand-paper"
                       >
-                        Invite to portal
+                        Managers {openManagers === v.id ? '▲' : '▾'}
                       </button>
-                    ))}
-                  {v.status !== 'active' ? (
-                    <button onClick={() => setStatus(v.id, 'active')} disabled={busy === v.id} className="rounded-lg border border-brand-line px-3 py-1 text-sm font-semibold hover:bg-brand-paper">
-                      Activate
-                    </button>
-                  ) : (
-                    <button onClick={() => setStatus(v.id, 'suspended')} disabled={busy === v.id} className="rounded-lg border border-brand-line px-3 py-1 text-sm font-semibold text-status-alert hover:bg-brand-paper">
-                      Suspend
-                    </button>
-                  )}
+                    )}
+                    {v.status !== 'active' ? (
+                      <button onClick={() => setStatus(v.id, 'active')} disabled={busy === v.id} className="rounded-lg border border-brand-line px-3 py-1 text-sm font-semibold hover:bg-brand-paper">
+                        Activate
+                      </button>
+                    ) : (
+                      <button onClick={() => setStatus(v.id, 'suspended')} disabled={busy === v.id} className="rounded-lg border border-brand-line px-3 py-1 text-sm font-semibold text-status-alert hover:bg-brand-paper">
+                        Suspend
+                      </button>
+                    )}
+                  </div>
                 </div>
+                {openManagers === v.id && (
+                  <div className="border-t border-brand-line bg-brand-paper/40 p-4">
+                    <VendorManagersPanel vendor={v} />
+                  </div>
+                )}
               </div>
             );
           })}

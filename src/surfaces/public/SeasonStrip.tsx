@@ -1,9 +1,9 @@
 import { fetchSeasonality, fetchVendors, fetchAllProducts } from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
-import { navigate } from '@/lib/router';
 import { seasonStyle } from '@/lib/format';
 import { SetupNotice } from '@/components/SetupNotice';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { useVisitList } from '@/lib/visitList';
 import type { SeasonItem, Vendor } from '@/lib/types';
 
 // The "this week" panel is built dynamically from what active vendors are
@@ -164,6 +164,7 @@ function ItemGrid({ items, cols = 6 }: { items: Offered[]; cols?: 3 | 4 | 6 }) {
 // Compact card: emoji + status on one row, name clamped to two lines, the note
 // kept as a hover tooltip, and carriers capped so rows stay short and scannable.
 function ItemCard({ it }: { it: Offered }) {
+  const visit = useVisitList();
   const style = it.status ? seasonStyle(it.status) : null;
   const shown = it.carriers.slice(0, 3);
   const extra = it.carriers.length - shown.length;
@@ -179,16 +180,24 @@ function ItemCard({ it }: { it: Offered }) {
       </div>
       <p className="line-clamp-2 text-sm font-semibold leading-tight text-brand-ink">{it.name}</p>
       <div className="mt-0.5 flex flex-wrap gap-1">
-        {shown.map((v) => (
-          <button
-            key={v.id}
-            onClick={() => navigate(`/vendor/${v.slug}`)}
-            title={`See ${v.name}`}
-            className="rounded-full bg-brand-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-primary-dark transition hover:bg-brand-primary/20"
-          >
-            {v.name}
-          </button>
-        ))}
+        {shown.map((v) => {
+          const added = visit.has(v.slug);
+          return (
+            <button
+              key={v.id}
+              onClick={() => visit.toggle(v.slug)}
+              title={added ? `Remove ${v.name} from your visit list` : `Add ${v.name} to your visit list`}
+              className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium transition ${
+                added
+                  ? 'bg-brand-primary text-white'
+                  : 'bg-brand-primary/10 text-brand-primary-dark hover:bg-brand-primary/20'
+              }`}
+            >
+              {added ? '✓ ' : ''}
+              {v.name}
+            </button>
+          );
+        })}
         {extra > 0 && <span className="px-1 py-0.5 text-[10px] text-brand-muted">+{extra} more</span>}
       </div>
     </div>

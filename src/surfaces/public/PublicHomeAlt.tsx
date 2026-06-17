@@ -4,6 +4,8 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { navigate } from '@/lib/router';
 import { formatDate, thisSaturdayISO } from '@/lib/format';
 import { SeasonStrip } from './SeasonStrip';
+import { VisitPanel } from './VisitPanel';
+import { useVisitList } from '@/lib/visitList';
 import type { Vendor, VendorOffering } from '@/lib/types';
 
 // Editorial variant of the shopper home: a split hero (copy + photo), a
@@ -12,6 +14,7 @@ import type { Vendor, VendorOffering } from '@/lib/types';
 // the toggle in PublicShell. The classic PublicHome is left untouched.
 export function PublicHomeAlt() {
   const { tenant } = useTheme();
+  const visit = useVisitList();
   const { data: vendors } = useAsync(fetchVendors, [], []);
   const { data: markets } = useAsync(fetchMarkets, [], []);
   const reference = thisSaturdayISO();
@@ -89,6 +92,11 @@ export function PublicHomeAlt() {
         <SeasonStrip layout="split" />
       </section>
 
+      {/* Visit list — the shopper's tapped vendors + a highlighted site map. */}
+      <section className="mx-auto max-w-content px-4 pb-8">
+        <VisitPanel />
+      </section>
+
       {/* Fresh this Saturday — full-bleed photo cards with white text. */}
       {freshItems.length > 0 && (
         <section className="mx-auto max-w-content px-4 pb-12">
@@ -97,40 +105,71 @@ export function PublicHomeAlt() {
             <h2 className="text-2xl">What vendors are bringing</h2>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {freshItems.map(({ o, vendor }) => (
-              <button
-                key={o.id}
-                onClick={() => navigate(`/vendor/${vendor.slug}`)}
-                className="group relative flex aspect-[16/10] flex-col justify-end overflow-hidden rounded-2xl border border-brand-line text-left shadow-card transition hover:shadow-lift"
-              >
-                {vendor.image_url ? (
-                  <img
-                    src={vendor.image_url}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-primary to-brand-primary-dark" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
-                <div className="relative p-4 text-white">
-                  <p className="font-semibold leading-tight">{vendor.name}</p>
-                  <p className="text-sm text-white/85">{o.headline ?? 'Bringing this week'}</p>
-                  {o.items.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {o.items.slice(0, 4).map((it) => (
-                        <span
-                          key={it}
-                          className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur"
-                        >
-                          {it}
-                        </span>
-                      ))}
-                    </div>
+            {freshItems.map(({ o, vendor }) => {
+              const added = visit.has(vendor.slug);
+              return (
+                <div
+                  key={o.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => visit.toggle(vendor.slug)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      visit.toggle(vendor.slug);
+                    }
+                  }}
+                  aria-pressed={added}
+                  title={added ? `Remove ${vendor.name} from your visit list` : `Add ${vendor.name} to your visit list`}
+                  className={`group relative flex aspect-[16/10] cursor-pointer flex-col justify-end overflow-hidden rounded-2xl border text-left shadow-card transition hover:shadow-lift ${
+                    added ? 'border-brand-primary ring-2 ring-brand-primary' : 'border-brand-line'
+                  }`}
+                >
+                  {vendor.image_url ? (
+                    <img
+                      src={vendor.image_url}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-brand-primary to-brand-primary-dark" />
                   )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+                  <span
+                    className={`absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold shadow transition ${
+                      added ? 'bg-brand-primary text-white' : 'bg-white/85 text-brand-ink/80 opacity-0 group-hover:opacity-100'
+                    }`}
+                  >
+                    {added ? '✓ On list' : '+ Visit'}
+                  </span>
+                  <div className="relative p-4 text-white">
+                    <p className="font-semibold leading-tight">{vendor.name}</p>
+                    <p className="text-sm text-white/85">{o.headline ?? 'Bringing this week'}</p>
+                    {o.items.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {o.items.slice(0, 4).map((it) => (
+                          <span
+                            key={it}
+                            className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur"
+                          >
+                            {it}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/vendor/${vendor.slug}`);
+                      }}
+                      className="mt-2 text-xs font-semibold text-white/90 underline-offset-2 hover:underline"
+                    >
+                      View →
+                    </button>
+                  </div>
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}

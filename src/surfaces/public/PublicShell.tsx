@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { VisitListProvider } from '@/lib/visitList';
 import { useHashRoute } from '@/lib/router';
 import { useTheme } from '@/theme/ThemeProvider';
 import { PublicHome } from './PublicHome';
@@ -56,7 +57,8 @@ export function PublicShell() {
     to === '/' ? path === '/' : path.startsWith(to) || (to === '/vendors' && path.startsWith('/vendor/'));
 
   return (
-    <div>
+    <VisitListProvider>
+      <div>
       <nav className="border-b border-brand-line bg-brand-card/80 backdrop-blur">
         <div className="mx-auto flex max-w-content flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
           <button onClick={() => go('/')} className="flex items-center gap-2.5 text-left">
@@ -121,6 +123,7 @@ export function PublicShell() {
           </span>
         </div>
       </footer>
-    </div>
+      </div>
+    </VisitListProvider>
   );
 }

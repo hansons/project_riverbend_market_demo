@@ -53,6 +53,22 @@ export async function fetchVendorConfirmed(vendorId: string): Promise<{ market_d
   return ((data as { market_date_id: string; stalls: string[] }[]) ?? []).filter((r) => r.stalls && r.stalls.length);
 }
 
+/** The next date for a market on/after `fromISO` (used to highlight a visit list). */
+export async function fetchUpcomingDateForMarket(
+  marketId: string,
+  fromISO: string,
+): Promise<{ id: string; date: string } | null> {
+  if (!isSupabaseConfigured) return null;
+  const { data } = await supabase
+    .from('market_dates')
+    .select('id, date')
+    .eq('market_id', marketId)
+    .gte('date', fromISO)
+    .order('date')
+    .limit(1);
+  return ((data as { id: string; date: string }[]) ?? [])[0] ?? null;
+}
+
 /** Upcoming community events (on/after `fromISO`), with their market joined. */
 export async function fetchUpcomingEvents(fromISO: string): Promise<MarketEvent[]> {
   if (!isSupabaseConfigured) return [];

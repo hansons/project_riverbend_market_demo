@@ -1,13 +1,30 @@
 import { navigate } from '@/lib/router';
 import { categoryEmoji } from '@/lib/format';
+import { useVisitList } from '@/lib/visitList';
 import { VendorImage } from './VendorImage';
 import type { Vendor } from '@/lib/types';
 
+// Tapping the card toggles the vendor into the shopper's visit list (added state
+// shows a ring + badge); the "View" link still opens the vendor's page.
 export function VendorCard({ vendor }: { vendor: Vendor }) {
+  const visit = useVisitList();
+  const added = visit.has(vendor.slug);
   return (
-    <button
-      onClick={() => navigate(`/vendor/${vendor.slug}`)}
-      className="card group overflow-hidden text-left transition hover:shadow-lift"
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => visit.toggle(vendor.slug)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          visit.toggle(vendor.slug);
+        }
+      }}
+      aria-pressed={added}
+      title={added ? `Remove ${vendor.name} from your visit list` : `Add ${vendor.name} to your visit list`}
+      className={`card group relative cursor-pointer overflow-hidden text-left transition hover:shadow-lift ${
+        added ? 'ring-2 ring-brand-primary' : ''
+      }`}
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-brand-paper">
         <VendorImage
@@ -19,6 +36,13 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
             Featured
           </span>
         )}
+        <span
+          className={`absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold shadow transition ${
+            added ? 'bg-brand-primary text-white' : 'bg-white/85 text-brand-ink/80 opacity-0 group-hover:opacity-100'
+          }`}
+        >
+          {added ? '✓ On list' : '+ Visit'}
+        </span>
         {vendor.logo_url && (
           <div className="absolute bottom-2 left-2 h-10 w-10 overflow-hidden rounded-lg border border-white/80 bg-white shadow">
             <img src={vendor.logo_url} alt="" className="h-full w-full object-contain p-0.5" />
@@ -27,19 +51,28 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
       </div>
       <div className="p-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-base font-semibold leading-tight text-brand-primary-dark">
-            {vendor.name}
-          </h3>
+          <h3 className="text-base font-semibold leading-tight text-brand-primary-dark">{vendor.name}</h3>
           <span className="chip shrink-0">
             {categoryEmoji(vendor.category)} {vendor.category}
           </span>
         </div>
         {vendor.tagline && <p className="mt-1 text-sm text-brand-muted">{vendor.tagline}</p>}
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-brand-muted">
-          {vendor.town && <span>📍 {vendor.town}</span>}
-          {vendor.market_days.length > 0 && <span>· {vendor.market_days.join(' & ')}</span>}
+        <div className="mt-3 flex items-center justify-between gap-2 text-xs text-brand-muted">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {vendor.town && <span>📍 {vendor.town}</span>}
+            {vendor.market_days.length > 0 && <span>· {vendor.market_days.join(' & ')}</span>}
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/vendor/${vendor.slug}`);
+            }}
+            className="shrink-0 font-semibold text-brand-primary-dark hover:underline"
+          >
+            View →
+          </button>
         </div>
       </div>
-    </button>
+    </div>
   );
 }

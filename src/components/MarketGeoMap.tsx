@@ -86,6 +86,21 @@ export function MarketGeoMap({
         else if (o[p.label]?.slug) navigate(`/vendor/${o[p.label]!.slug}`);
       });
       layer.addLayer(rect);
+
+      // Always-visible stall number, centered on the stall (non-interactive so
+      // clicks fall through to the rectangle; white + shadow stays legible on imagery).
+      layer.addLayer(
+        L.marker([p.lat, p.lng], {
+          interactive: false,
+          keyboard: false,
+          icon: L.divIcon({
+            className: '',
+            html: `<div style="font:700 11px sans-serif;color:#fff;text-align:center;white-space:nowrap;text-shadow:0 0 2px #000,0 0 3px #000">${p.label}</div>`,
+            iconSize: [28, 14],
+            iconAnchor: [14, 7],
+          }),
+        }),
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [occupied, highlight, stalls, center]);

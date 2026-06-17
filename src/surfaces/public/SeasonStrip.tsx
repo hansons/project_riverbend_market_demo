@@ -15,7 +15,7 @@ type ProductRow = { vendor_id: string; name: string; category: string | null; in
 
 // Raw product categories → the labelled groups shown here, in render order.
 const GROUPS: { key: string; label: string; emoji: string; cats: string[] }[] = [
-  { key: 'prepared', label: 'Prepared foods', emoji: '🍴', cats: ['Prepared'] },
+  { key: 'prepared', label: 'Prepared foods & drinks', emoji: '🍴', cats: ['Prepared', 'Beverage', 'Coffee', 'Tea'] },
   { key: 'veg', label: 'Vegetables', emoji: '🥬', cats: ['Vegetable'] },
   { key: 'fruit', label: 'Fruit', emoji: '🍎', cats: ['Fruit'] },
   { key: 'herb', label: 'Herbs', emoji: '🌿', cats: ['Herb'] },
@@ -24,7 +24,6 @@ const GROUPS: { key: string; label: string; emoji: string; cats: string[] }[] = 
   { key: 'meat', label: 'Meat & eggs', emoji: '🥩', cats: ['Meat', 'Eggs'] },
   { key: 'dairy', label: 'Cheese & dairy', emoji: '🧀', cats: ['Cheese', 'Dairy'] },
   { key: 'seafood', label: 'Seafood', emoji: '🐟', cats: ['Seafood'] },
-  { key: 'drinks', label: 'Drinks', emoji: '☕', cats: ['Beverage', 'Coffee', 'Tea'] },
   { key: 'pantry', label: 'Pantry & sweets', emoji: '🍯', cats: ['Pantry', 'Confection', 'Pasta', 'Grain', 'Nuts'] },
   { key: 'flowers', label: 'Flowers', emoji: '💐', cats: ['Flowers'] },
   { key: 'plants', label: 'Plants & trees', emoji: '🌱', cats: ['Plant'] },
@@ -110,7 +109,7 @@ export function SeasonStrip({ layout = 'stacked' }: { layout?: 'stacked' | 'spli
         g.key === 'prepared' ? (
           <div key={g.key} className="rounded-2xl border border-brand-accent/40 bg-brand-accent/5 p-4">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-berry">
-              🍴 Ready now — prepared foods
+              🍴 Ready now — prepared foods &amp; drinks
             </h3>
             <ItemGrid items={g.items} cols={split ? 4 : 6} />
           </div>
@@ -137,7 +136,7 @@ function ItemGrid({ items, cols = 6 }: { items: Offered[]; cols?: 3 | 4 | 6 }) {
         ? 'sm:grid-cols-2 lg:grid-cols-4'
         : 'sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
   return (
-    <div className={`grid grid-cols-2 gap-3 ${colClass}`}>
+    <div className={`grid grid-cols-2 gap-2 ${colClass}`}>
       {items.map((it) => (
         <ItemCard key={it.name} it={it} />
       ))}
@@ -145,29 +144,35 @@ function ItemGrid({ items, cols = 6 }: { items: Offered[]; cols?: 3 | 4 | 6 }) {
   );
 }
 
+// Compact card: emoji + status on one row, name clamped to two lines, the note
+// kept as a hover tooltip, and carriers capped so rows stay short and scannable.
 function ItemCard({ it }: { it: Offered }) {
   const style = it.status ? seasonStyle(it.status) : null;
+  const shown = it.carriers.slice(0, 3);
+  const extra = it.carriers.length - shown.length;
   return (
-    <div className="card flex flex-col p-3">
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-2xl">{it.emoji}</span>
+    <div className="card flex flex-col gap-1 p-2.5" title={it.note ?? undefined}>
+      <div className="flex items-center justify-between gap-1">
+        <span className="text-lg leading-none">{it.emoji}</span>
         {style && (
-          <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${style.className}`}>{style.label}</span>
+          <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${style.className}`}>
+            {style.label}
+          </span>
         )}
       </div>
-      <p className="mt-2 font-semibold leading-tight text-brand-ink">{it.name}</p>
-      {it.note && <p className="text-xs text-brand-muted">{it.note}</p>}
-      <div className="mt-2 flex flex-wrap gap-1">
-        {it.carriers.map((v) => (
+      <p className="line-clamp-2 text-sm font-semibold leading-tight text-brand-ink">{it.name}</p>
+      <div className="mt-0.5 flex flex-wrap gap-1">
+        {shown.map((v) => (
           <button
             key={v.id}
             onClick={() => navigate(`/vendor/${v.slug}`)}
             title={`See ${v.name}`}
-            className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-[11px] font-medium text-brand-primary-dark transition hover:bg-brand-primary/20"
+            className="rounded-full bg-brand-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-primary-dark transition hover:bg-brand-primary/20"
           >
             {v.name}
           </button>
         ))}
+        {extra > 0 && <span className="px-1 py-0.5 text-[10px] text-brand-muted">+{extra} more</span>}
       </div>
     </div>
   );

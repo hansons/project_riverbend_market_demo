@@ -22,7 +22,7 @@ function nameMatches(item: string, product: string): boolean {
 
 type Avail = { s: SeasonItem; carriers: Vendor[] };
 
-export function SeasonStrip() {
+export function SeasonStrip({ layout = 'stacked' }: { layout?: 'stacked' | 'split' } = {}) {
   const { data, loading } = useAsync(
     async () => {
       const [items, vendors, products] = await Promise.all([
@@ -82,39 +82,71 @@ export function SeasonStrip() {
     return <p className="text-sm text-brand-muted">No vendors have posted availability yet this week.</p>;
   }
 
+  const split = layout === 'split';
+
+  const preparedBlock =
+    prepared.length > 0 ? (
+      <div className="rounded-2xl border border-brand-accent/40 bg-brand-accent/5 p-4">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-berry">
+          🍴 Ready now — prepared foods
+        </h3>
+        <SeasonGrid items={prepared} cols={split ? 3 : 6} />
+      </div>
+    ) : null;
+
+  const denseBlocks = dense.map(({ cat, list }) => (
+    <div key={cat}>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">{cat}</h3>
+      <SeasonGrid items={list} cols={split ? 4 : 6} />
+    </div>
+  ));
+
+  const pooledBlock =
+    pooled.length > 0 ? (
+      <div>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">
+          Also in season
+        </h3>
+        <SeasonGrid items={pooled} />
+      </div>
+    ) : null;
+
+  // Split layout: prepared-foods callout beside the main category grid, with the
+  // pooled "also in season" row spanning full width below.
+  if (split) {
+    return (
+      <div className="space-y-6">
+        {preparedBlock ? (
+          <div className="grid gap-6 lg:grid-cols-[2fr_3fr]">
+            {preparedBlock}
+            <div className="space-y-6">{denseBlocks}</div>
+          </div>
+        ) : (
+          <div className="space-y-6">{denseBlocks}</div>
+        )}
+        {pooledBlock}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {prepared.length > 0 && (
-        <div className="rounded-2xl border border-brand-accent/40 bg-brand-accent/5 p-4">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-berry">
-            🍴 Ready now — prepared foods
-          </h3>
-          <SeasonGrid items={prepared} />
-        </div>
-      )}
-
-      {dense.map(({ cat, list }) => (
-        <div key={cat}>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">{cat}</h3>
-          <SeasonGrid items={list} />
-        </div>
-      ))}
-
-      {pooled.length > 0 && (
-        <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">
-            Also in season
-          </h3>
-          <SeasonGrid items={pooled} />
-        </div>
-      )}
+      {preparedBlock}
+      {denseBlocks}
+      {pooledBlock}
     </div>
   );
 }
 
-function SeasonGrid({ items }: { items: Avail[] }) {
+function SeasonGrid({ items, cols = 6 }: { items: Avail[]; cols?: 3 | 4 | 6 }) {
+  const colClass =
+    cols === 3
+      ? 'sm:grid-cols-2 lg:grid-cols-3'
+      : cols === 4
+        ? 'sm:grid-cols-2 lg:grid-cols-4'
+        : 'sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6';
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+    <div className={`grid grid-cols-2 gap-3 ${colClass}`}>
       {items.map(({ s, carriers }) => (
         <SeasonCard key={s.id} s={s} carriers={carriers} />
       ))}

@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useHashRoute } from '@/lib/router';
 import { useTheme } from '@/theme/ThemeProvider';
 import { PublicHome } from './PublicHome';
+import { PublicHomeAlt } from './PublicHomeAlt';
 import { VendorBrowse } from './VendorBrowse';
 import { VendorDetail } from './VendorDetail';
 import { MarketInfo } from './MarketInfo';
@@ -16,13 +18,34 @@ const NAV = [
   { to: '/apply', label: 'Sell with us' },
 ];
 
+const HOME_VARIANT_KEY = 'rbm.homeVariant';
+
 export function PublicShell() {
   const [path, go] = useHashRoute();
   const { tenant } = useTheme();
+  const [homeAlt, setHomeAlt] = useState(() => {
+    try {
+      return localStorage.getItem(HOME_VARIANT_KEY) === 'alt';
+    } catch {
+      return false;
+    }
+  });
+
+  function toggleHome() {
+    setHomeAlt((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem(HOME_VARIANT_KEY, next ? 'alt' : 'classic');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   const vendorMatch = path.match(/^\/vendor\/([^/]+)$/);
 
-  let view = <PublicHome />;
+  let view = homeAlt ? <PublicHomeAlt /> : <PublicHome />;
   if (vendorMatch) view = <VendorDetail slug={decodeURIComponent(vendorMatch[1])} />;
   else if (path.startsWith('/vendors')) view = <VendorBrowse />;
   else if (path.startsWith('/markets')) view = <MarketInfo />;
@@ -75,6 +98,16 @@ export function PublicShell() {
       <AnnouncementBanner />
 
       {view}
+
+      {path === '/' && (
+        <button
+          onClick={toggleHome}
+          title="Demo: switch home page layout"
+          className="fixed bottom-4 right-4 z-40 rounded-full border border-brand-line bg-brand-card px-3 py-2 text-xs font-semibold text-brand-ink shadow-lift transition hover:bg-brand-paper"
+        >
+          Layout: {homeAlt ? 'Editorial' : 'Classic'} · switch
+        </button>
+      )}
 
       <footer className="mt-16 border-t border-brand-line bg-brand-card">
         <div className="mx-auto flex max-w-content flex-col gap-2 px-4 py-8 text-sm text-brand-muted sm:flex-row sm:items-center sm:justify-between">

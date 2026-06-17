@@ -25,11 +25,13 @@ function stallIcon(label: string, disabled: boolean, category: string | undefine
 export function StallLayoutEditor({
   marketId,
   initialStalls,
+  center = DEFAULT_CENTER,
   onSaved,
   onCancel,
 }: {
   marketId: string;
   initialStalls: StallPos[];
+  center?: [number, number];
   onSaved: () => void;
   onCancel: () => void;
 }) {
@@ -45,7 +47,7 @@ export function StallLayoutEditor({
 
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
-    const start = initialStalls.length ? initialStalls : generateStallGrid(DEFAULT_CENTER);
+    const start = initialStalls.length ? initialStalls : generateStallGrid(center);
     posRef.current = Object.fromEntries(start.map((s) => [s.label, [s.lat, s.lng] as [number, number]]));
     const map = L.map(elRef.current, { scrollWheelZoom: false });
     L.tileLayer(ESRI, { maxZoom: 20, attribution: ATTRIB }).addTo(map);
@@ -117,8 +119,8 @@ export function StallLayoutEditor({
   }
 
   function resetGrid() {
-    const center = centroid(Object.values(posRef.current).map(([lat, lng]) => ({ label: '', lat, lng }))) ?? DEFAULT_CENTER;
-    const grid = generateStallGrid(center);
+    const c = centroid(Object.values(posRef.current).map(([lat, lng]) => ({ label: '', lat, lng }))) ?? center;
+    const grid = generateStallGrid(c);
     for (const label of Object.keys(markersRef.current)) markersRef.current[label].remove();
     markersRef.current = {};
     posRef.current = Object.fromEntries(grid.map((s) => [s.label, [s.lat, s.lng] as [number, number]]));

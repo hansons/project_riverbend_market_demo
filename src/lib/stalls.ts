@@ -63,6 +63,34 @@ export function centroid(stalls: StallPos[]): [number, number] | null {
   return [lat, lng];
 }
 
+/** A market's saved default map center (null if never set — callers fall back to DEFAULT_CENTER). */
+export async function fetchMarketCenter(marketId: string): Promise<[number, number] | null> {
+  const { data } = await supabase
+    .from('market_settings')
+    .select('center_lat, center_lng')
+    .eq('market_id', marketId)
+    .maybeSingle();
+  const r = data as { center_lat: number | null; center_lng: number | null } | null;
+  return r && r.center_lat != null && r.center_lng != null ? [r.center_lat, r.center_lng] : null;
+}
+
+/** Saved default centers for every market that has one, keyed by market id. */
+export async function fetchAllMarketCenters(): Promise<Record<string, [number, number]>> {
+  const { data } = await supabase.from('market_settings').select('market_id, center_lat, center_lng');
+  const rows = (data as { market_id: string; center_lat: number | null; center_lng: number | null }[]) ?? [];
+  const out: Record<string, [number, number]> = {};
+  for (const r of rows) if (r.center_lat != null && r.center_lng != null) out[r.market_id] = [r.center_lat, r.center_lng];
+  return out;
+}
+
+/** Set a market's default map center (owner only — RLS enforces). */
+export async function saveMarketCenter(marketId: string, lat: number, lng: number): Promise<string | null> {
+  const { error } = await supabase
+    .from('market_settings')
+    .upsert({ market_id: marketId, center_lat: lat, center_lng: lng, updated_at: new Date().toISOString() }, { onConflict: 'market_id' });
+  return error?.message ?? null;
+}
+
 /** Saved stall coordinates for a market (empty if the layout hasn't been placed). */
 export async function fetchMarketStalls(marketId: string): Promise<StallPos[]> {
   const { data } = await supabase.from('market_stalls').select('label, lat, lng, disabled, category').eq('market_id', marketId);

@@ -18,7 +18,7 @@ import { MarketMap } from '@/components/MarketMap';
 import { MarketGeoMap } from '@/components/MarketGeoMap';
 import { StallLayoutEditor } from '@/components/StallLayoutEditor';
 import { StallGridEditor } from '@/components/StallGridEditor';
-import { fetchMarketStalls } from '@/lib/stalls';
+import { fetchMarketStalls, fetchMarketCenter, DEFAULT_CENTER } from '@/lib/stalls';
 import { CsvToolbar } from '@/components/CsvToolbar';
 
 const TOTAL_STALLS = 48; // A–D × 12
@@ -64,6 +64,12 @@ export function AdminStalls() {
     [],
   );
   const disabledStalls = new Set(marketStalls.filter((s) => s.disabled).map((s) => s.label));
+  const { data: marketCenter } = useAsync(
+    () => (currentMarketId ? fetchMarketCenter(currentMarketId) : Promise.resolve(null)),
+    [currentMarketId],
+    null,
+  );
+  const center = marketCenter ?? DEFAULT_CENTER;
 
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -420,6 +426,7 @@ export function AdminStalls() {
               key={currentMarketId}
               marketId={currentMarketId}
               initialStalls={marketStalls}
+              center={center}
               onSaved={() => {
                 reloadStalls();
                 setEditingLayout(false);
@@ -433,6 +440,7 @@ export function AdminStalls() {
               highlight={selectedRow?.stalls ?? null}
               onCellClick={clickCell}
               stalls={marketStalls}
+              center={center}
               colorBy={colorBy}
             />
           )}

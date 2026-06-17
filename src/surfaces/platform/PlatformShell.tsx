@@ -3,10 +3,12 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useKeyNav } from '@/lib/useKeyNav';
 import { resetDemo } from '@/lib/platform';
 import { ThemePicker } from '@/components/ThemePicker';
+import { OwnerMarkets } from './OwnerMarkets';
 import type { Brand, Tenant } from '@/lib/types';
 
-type Section = 'branding' | 'reset' | 'about';
+type Section = 'markets' | 'branding' | 'reset' | 'about';
 const SECTIONS: { key: Section; label: string; icon: string }[] = [
+  { key: 'markets', label: 'Markets', icon: '🏪' },
   { key: 'branding', label: 'Branding', icon: '🎨' },
   { key: 'reset', label: 'Demo controls', icon: '♻️' },
   { key: 'about', label: 'The platform', icon: '⚙️' },
@@ -14,7 +16,7 @@ const SECTIONS: { key: Section; label: string; icon: string }[] = [
 
 export function PlatformShell() {
   const { tenant } = useTheme();
-  const [section, setSection] = useState<Section>('branding');
+  const [section, setSection] = useState<Section>('markets');
 
   // W/S (and ↑/↓) move between the left-rail sections.
   const sectionIdx = SECTIONS.findIndex((s) => s.key === section);
@@ -54,6 +56,7 @@ export function PlatformShell() {
         </nav>
 
         <div>
+          {section === 'markets' && <OwnerMarkets />}
           {section === 'branding' && <Branding />}
           {section === 'reset' && <ResetSection />}
           {section === 'about' && <About />}

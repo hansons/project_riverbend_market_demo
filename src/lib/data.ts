@@ -53,20 +53,37 @@ export async function fetchVendorConfirmed(vendorId: string): Promise<{ market_d
   return ((data as { market_date_id: string; stalls: string[] }[]) ?? []).filter((r) => r.stalls && r.stalls.length);
 }
 
-/** The soonest market date on/after `fromISO`, with its market. The shopper's
- *  visit map keys off this so it shows the same market (and placed stalls) the
- *  vendor and admin satellite views do — i.e. the next market everyone's prepping. */
-export async function fetchUpcomingMarketDate(
+/** The flagship market (lowest sort) and its next date on/after `fromISO`. The
+ *  shopper front page keys off this so the cards + visit map reflect the main
+ *  upcoming market — not whichever market happens to fall soonest on the calendar. */
+export async function fetchFrontPageMarketDate(
   fromISO: string,
-): Promise<{ id: string; market_id: string; date: string } | null> {
+): Promise<{ marketId: string; dateId: string; dateISO: string } | null> {
   if (!isSupabaseConfigured) return null;
-  const { data } = await supabase
+  const { data: mk } = await supabase.from('markets').select('id').order('sort').limit(1);
+  const marketId = ((mk as { id: string }[]) ?? [])[0]?.id;
+  if (!marketId) return null;
+  const { data: dt } = await supabase
     .from('market_dates')
-    .select('id, market_id, date')
+    .select('id, date')
+    .eq('market_id', marketId)
     .gte('date', fromISO)
     .order('date')
     .limit(1);
-  return ((data as { id: string; market_id: string; date: string }[]) ?? [])[0] ?? null;
+  const row = ((dt as { id: string; date: string }[]) ?? [])[0];
+  return row ? { marketId, dateId: row.id, dateISO: row.date } : null;
+}
+
+/** Vendor ids confirmed (and active) for a market date — i.e. who's actually attending. */
+export async function fetchAttendingForDate(marketDateId: string): Promise<string[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data } = await supabase
+    .from('vendor_schedule')
+    .select('vendor_id, vendors(status)')
+    .eq('market_date_id', marketDateId)
+    .eq('status', 'confirmed');
+  const rows = (data as unknown as { vendor_id: string; vendors: { status: string } | null }[]) ?? [];
+  return rows.filter((r) => r.vendors?.status === 'active').map((r) => r.vendor_id);
 }
 
 /** Upcoming community events (on/after `fromISO`), with their market joined. */

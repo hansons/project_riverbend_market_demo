@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAsync } from '@/lib/useAsync';
-import { fetchVendors, fetchAssignmentsForDate, fetchUpcomingMarketDate } from '@/lib/data';
+import { fetchVendors, fetchAssignmentsForDate, fetchFrontPageMarketDate } from '@/lib/data';
 import { fetchMarketStalls, type StallPos } from '@/lib/stalls';
 import { formatDate } from '@/lib/format';
 import { navigate } from '@/lib/router';
@@ -25,16 +25,16 @@ export function VisitPanel() {
   const visit = useVisitList();
   const { data, loading } = useAsync(
     async () => {
-      // Key off the soonest upcoming market date (and its market) so the stalls +
-      // placements match the vendor and admin satellite views, not the flagship by sort.
-      const date = await fetchUpcomingMarketDate(todayISO());
+      // Key off the flagship market's next date so stalls + assignments match the
+      // front-page "this Saturday" framing (and the SeasonStrip attending filter).
+      const fp = await fetchFrontPageMarketDate(todayISO());
       const [vendors, stalls, assignsRaw] = await Promise.all([
         fetchVendors(),
-        date ? fetchMarketStalls(date.market_id) : Promise.resolve([] as StallPos[]),
-        date ? fetchAssignmentsForDate(date.id) : Promise.resolve([]),
+        fp ? fetchMarketStalls(fp.marketId) : Promise.resolve([] as StallPos[]),
+        fp ? fetchAssignmentsForDate(fp.dateId) : Promise.resolve([]),
       ]);
       const assigns: Assign[] = assignsRaw.map((a) => ({ stall: a.stall, slug: a.slug }));
-      return { vendors, stalls, assigns, dateISO: date?.date ?? null };
+      return { vendors, stalls, assigns, dateISO: fp?.dateISO ?? null };
     },
     [],
     { vendors: [] as Vendor[], stalls: [] as StallPos[], assigns: [] as Assign[], dateISO: null as string | null },

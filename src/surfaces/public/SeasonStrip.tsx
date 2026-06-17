@@ -1,4 +1,4 @@
-import { fetchSeasonality, fetchVendors, fetchAllProducts } from '@/lib/data';
+import { fetchSeasonality, fetchVendors, fetchAllProducts, fetchFrontPageMarketDate, fetchAttendingForDate } from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
 import { seasonStyle } from '@/lib/format';
 import { SetupNotice } from '@/components/SetupNotice';
@@ -12,6 +12,11 @@ import type { SeasonItem, Vendor } from '@/lib/types';
 // when an item name matches. Add a vendor or product and it shows up on its own.
 
 type ProductRow = { vendor_id: string; name: string; category: string | null; in_season: boolean };
+
+function todayISO(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
 
 // Raw product categories collapse into a handful of broad sections (in render
 // order) so the panel stays compact. `cats` order also sub-orders items within
@@ -59,16 +64,24 @@ export function SeasonStrip({ layout = 'stacked' }: { layout?: 'stacked' | 'spli
   const { data, loading } = useAsync(
     async () => {
       const [items, vendors, products] = await Promise.all([fetchSeasonality(), fetchVendors(), fetchAllProducts()]);
-      return { items, vendors, products };
+      // Limit the panel to vendors confirmed for the front-page market (the
+      // flagship's next date), so items from vendors who won't be there are hidden.
+      const fp = await fetchFrontPageMarketDate(todayISO());
+      const attending = fp ? await fetchAttendingForDate(fp.dateId) : [];
+      return { items, vendors, products, attending };
     },
     [],
-    { items: [] as SeasonItem[], vendors: [] as Vendor[], products: [] as ProductRow[] },
+    { items: [] as SeasonItem[], vendors: [] as Vendor[], products: [] as ProductRow[], attending: [] as string[] },
   );
 
   if (loading) return <div className="h-24 animate-pulse rounded-2xl bg-brand-card" />;
   if (!data.products.length) return isSupabaseConfigured ? null : <SetupNotice />;
 
   const vendorById = new Map(data.vendors.map((v) => [v.id, v]));
+  // Only show items carried by vendors attending the front-page market. Falls back
+  // to all vendors if there's no attendance data yet (so the panel never blanks).
+  const attendingSet = new Set(data.attending);
+  const filterAttending = attendingSet.size > 0;
   // Curated seasonality match (status/emoji/note) by exact name or shared word.
   const seasonFor = (name: string): SeasonItem | undefined =>
     data.items.find((s) => s.item.toLowerCase() === name.toLowerCase() || shareWord(s.item, name));
@@ -79,6 +92,7 @@ export function SeasonStrip({ layout = 'stacked' }: { layout?: 'stacked' | 'spli
     if (!p.in_season) continue;
     const vendor = vendorById.get(p.vendor_id); // active vendors only
     if (!vendor) continue;
+    if (filterAttending && !attendingSet.has(vendor.id)) continue; // attending the front-page market
     const cat = (p.category ?? '').trim();
     const g = CAT_TO_GROUP.get(cat);
     if (!g) continue;

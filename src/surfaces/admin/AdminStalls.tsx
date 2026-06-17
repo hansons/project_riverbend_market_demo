@@ -15,6 +15,7 @@ import { useAsync } from '@/lib/useAsync';
 import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
 import { categoryEmoji, formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
+import { MarketGeoMap } from '@/components/MarketGeoMap';
 import { CsvToolbar } from '@/components/CsvToolbar';
 
 const TOTAL_STALLS = 48; // A–D × 12
@@ -56,6 +57,7 @@ export function AdminStalls() {
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [mapView, setMapView] = useState<'grid' | 'satellite'>('grid');
   const [importPreview, setImportPreview] = useState<{ rows: ImportRow[]; skipped: number; dates: Set<string> } | null>(null);
 
   const confirmed = rows.filter((r) => r.status === 'confirmed');
@@ -322,7 +324,31 @@ export function AdminStalls() {
 
       {hint && <p className="text-sm text-brand-berry">{hint}</p>}
 
-      {!loading && dateId && <MarketMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} />}
+      {!loading && dateId && (
+        <div>
+          <div className="mb-2 flex gap-1.5">
+            {(['grid', 'satellite'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMapView(m)}
+                className={[
+                  'rounded-full border px-3 py-1 text-sm font-medium transition',
+                  mapView === m
+                    ? 'border-brand-primary bg-brand-primary text-white'
+                    : 'border-brand-line bg-brand-card text-brand-ink/70',
+                ].join(' ')}
+              >
+                {m === 'grid' ? 'Grid' : '🛰 Satellite'}
+              </button>
+            ))}
+          </div>
+          {mapView === 'grid' ? (
+            <MarketMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} />
+          ) : (
+            <MarketGeoMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} />
+          )}
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Scheduled (placeable) */}

@@ -7,11 +7,13 @@ import { StallSetList, type StallItem } from './StallSetList';
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const ATTRIB = 'Tiles © Esri, Maxar, Earthstar Geographics';
 
-function stallIcon(label: string, disabled: boolean, category?: string): L.DivIcon {
+function stallIcon(label: string, disabled: boolean, category: string | undefined, highlighted: boolean): L.DivIcon {
   const bg = disabled ? '#6b7280' : categoryColor(category) ?? 'rgb(var(--brand-primary))';
+  const border = highlighted ? '2px solid rgb(var(--brand-accent))' : '1px solid rgba(0,0,0,.4)';
+  const shadow = highlighted ? '0 0 0 2px rgba(255,255,255,.7),0 1px 5px rgba(0,0,0,.6)' : '0 1px 3px rgba(0,0,0,.45)';
   return L.divIcon({
     className: '',
-    html: `<div style="opacity:${disabled ? 0.75 : 1};background:${bg};color:#fff;border:1px solid rgba(0,0,0,.4);border-radius:5px;font:600 11px sans-serif;display:flex;align-items:center;justify-content:center;width:30px;height:22px;box-shadow:0 1px 3px rgba(0,0,0,.45)">${label}</div>`,
+    html: `<div style="opacity:${disabled ? 0.75 : 1};background:${bg};color:#fff;border:${border};border-radius:5px;font:600 11px sans-serif;display:flex;align-items:center;justify-content:center;width:30px;height:22px;box-shadow:${shadow}">${label}</div>`,
     iconSize: [30, 22],
     iconAnchor: [15, 11],
   });
@@ -39,6 +41,7 @@ export function StallLayoutEditor({
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<'ok' | string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
@@ -73,18 +76,22 @@ export function StallLayoutEditor({
       posRef.current[it.label] = pos;
       const existing = markersRef.current[it.label];
       if (existing) {
-        existing.setIcon(stallIcon(it.label, it.disabled, it.category));
+        existing.setIcon(stallIcon(it.label, it.disabled, it.category, selected === it.label));
       } else {
-        const marker = L.marker(pos, { draggable: true, icon: stallIcon(it.label, it.disabled, it.category) }).addTo(map);
+        const marker = L.marker(pos, {
+          draggable: true,
+          icon: stallIcon(it.label, it.disabled, it.category, selected === it.label),
+        }).addTo(map);
         marker.on('dragend', () => {
           const ll = marker.getLatLng();
           posRef.current[it.label] = [ll.lat, ll.lng];
           setDirty(true);
         });
+        marker.on('click', () => setSelected(it.label));
         markersRef.current[it.label] = marker;
       }
     }
-  }, [items]);
+  }, [items, selected]);
 
   function addStall(label: string): string | null {
     if (!label) return 'Enter a stall label.';
@@ -139,15 +146,54 @@ export function StallLayoutEditor({
     }
   }
 
+  const selectedItem = items.find((i) => i.label === selected) ?? null;
+
   return (
     <div className="grid gap-3 lg:grid-cols-[1fr_260px]">
       <div>
         <p className="mb-2 text-sm text-brand-muted">
-          Drag stalls to position them; add, remove, or disable them in the list. Save when done.
+          Drag stalls to position them; click one to configure it. Add, remove, or disable stalls in
+          the list, then save.
         </p>
         <div ref={elRef} className="h-[440px] w-full overflow-hidden rounded-2xl border border-brand-line" />
       </div>
-      <StallSetList items={items} onAdd={addStall} onRemove={removeStall} onToggleDisable={toggleDisable} onSetCategory={setCategory} />
+      <div>
+        {selectedItem && (
+          <div className="card mb-3 p-3">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-brand-ink">Stall {selectedItem.label}</p>
+              <button onClick={() => setSelected(null)} className="text-xs text-brand-muted hover:underline">
+                Close
+              </button>
+            </div>
+            <label className="mt-2 block">
+              <span className="field-label">Category</span>
+              <input
+                list="stall-categories"
+                className="field-input mt-1"
+                value={selectedItem.category ?? ''}
+                onChange={(e) => setCategory(selectedItem.label, e.target.value)}
+                placeholder="Category (optional)"
+              />
+            </label>
+            <div className="mt-3 flex items-center gap-3">
+              <button className="btn-outline" onClick={() => toggleDisable(selectedItem.label)}>
+                {selectedItem.disabled ? 'Enable stall' : 'Disable stall'}
+              </button>
+              <button
+                className="text-sm font-semibold text-status-alert hover:underline"
+                onClick={() => {
+                  removeStall(selectedItem.label);
+                  setSelected(null);
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
+        <StallSetList items={items} onAdd={addStall} onRemove={removeStall} onToggleDisable={toggleDisable} onSetCategory={setCategory} />
+      </div>
       <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
         <button className="btn-primary" onClick={save} disabled={saving || !dirty}>
           {saving ? 'Saving…' : 'Save layout'}

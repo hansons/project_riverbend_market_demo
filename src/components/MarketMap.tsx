@@ -79,6 +79,7 @@ export function MarketMap({
   onCellClick,
   stalls,
   colorBy = 'status',
+  clickableDisabled = false,
 }: {
   occupied?: Record<string, MapOccupant>;
   highlight?: string | string[] | null;
@@ -86,6 +87,7 @@ export function MarketMap({
   onCellClick?: (label: string) => void;
   stalls?: GridStall[];
   colorBy?: 'status' | 'category';
+  clickableDisabled?: boolean;
 }) {
   const set = stalls && stalls.length ? stalls : defaultStalls();
   const { placed, vbW, vbH } = layout(set);
@@ -136,12 +138,12 @@ export function MarketMap({
             textFill = 'rgb(var(--brand-muted))';
             dash = '3 3';
           }
-          const clickable = !s.disabled && (Boolean(onCellClick) || Boolean(occ?.slug));
+          const clickable = (clickableDisabled || !s.disabled) && (Boolean(onCellClick) || Boolean(occ?.slug));
           return (
             <g
               key={s.label}
               onClick={() => {
-                if (s.disabled) return;
+                if (s.disabled && !clickableDisabled) return;
                 if (onCellClick) onCellClick(s.label);
                 else if (occ?.slug) navigate(`/vendor/${occ.slug}`);
               }}

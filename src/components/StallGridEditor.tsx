@@ -24,6 +24,7 @@ export function StallGridEditor({
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [msg, setMsg] = useState<'ok' | string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
   function add(label: string): string | null {
     if (!label) return 'Enter a stall label.';
@@ -63,16 +64,54 @@ export function StallGridEditor({
     }
   }
 
+  const selectedItem = items.find((i) => i.label === selected) ?? null;
+
   return (
     <div className="grid gap-3 lg:grid-cols-[1fr_260px]">
       <div>
         <p className="mb-2 text-sm text-brand-muted">
-          Add, remove, or disable stalls. New stalls drop onto the satellite map at the market center —
-          switch to Satellite to position them.
+          Click a stall to configure it. Add, remove, or disable stalls; new stalls drop onto the
+          satellite map at the market center — switch to Satellite to position them.
         </p>
-        <MarketMap stalls={items} colorBy="category" />
+        <MarketMap stalls={items} colorBy="category" onCellClick={setSelected} highlight={selected} clickableDisabled />
       </div>
-      <StallSetList items={items} onAdd={add} onRemove={remove} onToggleDisable={toggle} onSetCategory={setCategory} />
+      <div>
+        {selectedItem && (
+          <div className="card mb-3 p-3">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-brand-ink">Stall {selectedItem.label}</p>
+              <button onClick={() => setSelected(null)} className="text-xs text-brand-muted hover:underline">
+                Close
+              </button>
+            </div>
+            <label className="mt-2 block">
+              <span className="field-label">Category</span>
+              <input
+                list="stall-categories"
+                className="field-input mt-1"
+                value={selectedItem.category ?? ''}
+                onChange={(e) => setCategory(selectedItem.label, e.target.value)}
+                placeholder="Category (optional)"
+              />
+            </label>
+            <div className="mt-3 flex items-center gap-3">
+              <button className="btn-outline" onClick={() => toggle(selectedItem.label)}>
+                {selectedItem.disabled ? 'Enable stall' : 'Disable stall'}
+              </button>
+              <button
+                className="text-sm font-semibold text-status-alert hover:underline"
+                onClick={() => {
+                  remove(selectedItem.label);
+                  setSelected(null);
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
+        <StallSetList items={items} onAdd={add} onRemove={remove} onToggleDisable={toggle} onSetCategory={setCategory} />
+      </div>
       <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
         <button className="btn-primary" onClick={save} disabled={saving || !dirty}>
           {saving ? 'Saving…' : 'Save stalls'}

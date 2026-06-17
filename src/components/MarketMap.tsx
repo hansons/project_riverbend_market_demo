@@ -1,9 +1,11 @@
 import { navigate } from '@/lib/router';
 
-// A simple, themeable stall map: 4 rows (A–D) × 12, generated to a fixed grid.
-// Cells color by state and re-theme via the brand CSS variables.
-const ROWS = ['A', 'B', 'C', 'D'];
-const COLS = 12;
+// A themeable stall map. Renders the market's stall SET (from market_stalls when
+// passed in), arranged into rows by parsing labels (A1 → row A, col 1); labels that
+// don't fit go in an overflow row. Falls back to a fixed A–D × 12 grid when no set
+// is provided (so views that don't pass one are unchanged). Cells color by state.
+const DEFAULT_ROWS = ['A', 'B', 'C', 'D'];
+const DEFAULT_COLS = 12;
 const CW = 60;
 const CH = 38;
 const GX = 6;
@@ -11,24 +13,60 @@ const GY = 30;
 const PADX = 30;
 const PADY = 46;
 
-interface Stall {
-  label: string;
-  x: number;
-  y: number;
-}
-const STALLS: Stall[] = ROWS.flatMap((r, ri) =>
-  Array.from({ length: COLS }, (_, ci) => ({
-    label: `${r}${ci + 1}`,
-    x: PADX + ci * (CW + GX),
-    y: PADY + ri * (CH + GY),
-  })),
-);
-const VB_W = PADX * 2 + COLS * (CW + GX);
-const VB_H = PADY + ROWS.length * (CH + GY) + 26;
-
 export interface MapOccupant {
   name: string;
   slug?: string;
+}
+
+export interface GridStall {
+  label: string;
+  disabled?: boolean;
+}
+
+function defaultStalls(): GridStall[] {
+  const out: GridStall[] = [];
+  for (const r of DEFAULT_ROWS) for (let c = 1; c <= DEFAULT_COLS; c++) out.push({ label: `${r}${c}` });
+  return out;
+}
+
+interface Placed {
+  label: string;
+  disabled: boolean;
+  x: number;
+  y: number;
+}
+
+function layout(stalls: GridStall[]): { placed: Placed[]; vbW: number; vbH: number } {
+  const rows = new Map<string, { col: number; s: GridStall }[]>();
+  const overflow: GridStall[] = [];
+  for (const s of stalls) {
+    const m = /^([A-Za-z]+)(\d+)$/.exec(s.label.trim());
+    if (m) {
+      const key = m[1].toUpperCase();
+      if (!rows.has(key)) rows.set(key, []);
+      rows.get(key)!.push({ col: parseInt(m[2], 10), s });
+    } else {
+      overflow.push(s);
+    }
+  }
+  const rowKeys = [...rows.keys()].sort();
+  const placed: Placed[] = [];
+  let maxCol = 1;
+  rowKeys.forEach((key, ri) => {
+    for (const { col, s } of rows.get(key)!.sort((a, b) => a.col - b.col)) {
+      maxCol = Math.max(maxCol, col);
+      placed.push({ label: s.label, disabled: !!s.disabled, x: PADX + (col - 1) * (CW + GX), y: PADY + ri * (CH + GY) });
+    }
+  });
+  if (overflow.length) {
+    const ri = rowKeys.length;
+    overflow.forEach((s, i) => {
+      maxCol = Math.max(maxCol, i + 1);
+      placed.push({ label: s.label, disabled: !!s.disabled, x: PADX + i * (CW + GX), y: PADY + ri * (CH + GY) });
+    });
+  }
+  const rowCount = rowKeys.length + (overflow.length ? 1 : 0);
+  return { placed, vbW: PADX * 2 + maxCol * (CW + GX), vbH: PADY + rowCount * (CH + GY) + 26 };
 }
 
 export function MarketMap({
@@ -36,76 +74,78 @@ export function MarketMap({
   highlight,
   highlightText,
   onCellClick,
+  stalls,
 }: {
   occupied?: Record<string, MapOccupant>;
   highlight?: string | string[] | null;
   highlightText?: string;
   onCellClick?: (label: string) => void;
+  stalls?: GridStall[];
 }) {
+  const set = stalls && stalls.length ? stalls : defaultStalls();
+  const { placed, vbW, vbH } = layout(set);
   const hiSet = new Set(Array.isArray(highlight) ? highlight : highlight ? [highlight] : []);
-  const hiStall = STALLS.find((s) => hiSet.has(s.label));
+  const hiStall = placed.find((s) => hiSet.has(s.label));
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-brand-line bg-brand-paper p-3">
-      <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="w-full min-w-[640px]" role="img" aria-label="Market stall map">
-        <text
-          x={VB_W / 2}
-          y={18}
-          textAnchor="middle"
-          className="text-[12px] font-semibold"
-          style={{ fill: 'rgb(var(--brand-muted))' }}
-        >
+      <svg viewBox={`0 0 ${vbW} ${vbH}`} className="w-full min-w-[640px]" role="img" aria-label="Market stall map">
+        <text x={vbW / 2} y={18} textAnchor="middle" className="text-[12px] font-semibold" style={{ fill: 'rgb(var(--brand-muted))' }}>
           ▲ Main entrance &amp; info booth
         </text>
 
-        {STALLS.map((s) => {
+        {placed.map((s) => {
           const occ = occupied[s.label];
           const isHi = hiSet.has(s.label);
-          const fill = isHi
-            ? 'rgb(var(--brand-accent) / 0.85)'
-            : occ
-              ? 'rgb(var(--brand-primary) / 0.15)'
-              : 'rgb(var(--brand-card))';
-          const stroke = isHi
-            ? 'rgb(var(--brand-accent))'
-            : occ
-              ? 'rgb(var(--brand-primary) / 0.5)'
-              : 'rgb(var(--brand-line))';
-          const textFill = isHi
-            ? 'rgb(var(--brand-ink))'
-            : occ
-              ? 'rgb(var(--brand-primary-dark))'
-              : 'rgb(var(--brand-muted))';
-          const clickable = Boolean(onCellClick) || Boolean(occ?.slug);
+          let fill: string;
+          let stroke: string;
+          let textFill: string;
+          let dash: string | undefined;
+          if (s.disabled) {
+            fill = 'rgb(var(--brand-muted) / 0.15)';
+            stroke = 'rgb(var(--brand-muted) / 0.6)';
+            textFill = 'rgb(var(--brand-muted))';
+            dash = '3 3';
+          } else if (isHi) {
+            fill = 'rgb(var(--brand-accent) / 0.85)';
+            stroke = 'rgb(var(--brand-accent))';
+            textFill = 'rgb(var(--brand-ink))';
+          } else if (occ) {
+            fill = 'rgb(var(--brand-primary) / 0.15)';
+            stroke = 'rgb(var(--brand-primary) / 0.5)';
+            textFill = 'rgb(var(--brand-primary-dark))';
+          } else {
+            fill = 'rgb(var(--brand-card))';
+            stroke = 'rgb(var(--brand-line))';
+            textFill = 'rgb(var(--brand-muted))';
+            dash = '3 3';
+          }
+          const clickable = !s.disabled && (Boolean(onCellClick) || Boolean(occ?.slug));
           return (
             <g
               key={s.label}
               onClick={() => {
+                if (s.disabled) return;
                 if (onCellClick) onCellClick(s.label);
                 else if (occ?.slug) navigate(`/vendor/${occ.slug}`);
               }}
               style={{ cursor: clickable ? 'pointer' : 'default' }}
             >
-              <title>{occ ? `${s.label} — ${occ.name}` : `${s.label} — available`}</title>
+              <title>{s.disabled ? `${s.label} — out of service` : occ ? `${s.label} — ${occ.name}` : `${s.label} — available`}</title>
               <rect
                 x={s.x}
                 y={s.y}
                 width={CW}
                 height={CH}
                 rx={6}
-                style={{
-                  fill,
-                  stroke,
-                  strokeWidth: isHi ? 2 : 1,
-                  strokeDasharray: occ || isHi ? undefined : '3 3',
-                }}
+                style={{ fill, stroke, strokeWidth: isHi && !s.disabled ? 2 : 1, strokeDasharray: dash }}
               />
               <text
                 x={s.x + CW / 2}
                 y={s.y + CH / 2 + 4}
                 textAnchor="middle"
                 className="text-[11px] font-semibold"
-                style={{ fill: textFill }}
+                style={{ fill: textFill, textDecoration: s.disabled ? 'line-through' : undefined }}
               >
                 {s.label}
               </text>
@@ -114,13 +154,7 @@ export function MarketMap({
         })}
 
         {hiStall && highlightText && (
-          <text
-            x={hiStall.x + CW / 2}
-            y={hiStall.y - 6}
-            textAnchor="middle"
-            className="text-[11px] font-bold"
-            style={{ fill: 'rgb(var(--brand-berry))' }}
-          >
+          <text x={hiStall.x + CW / 2} y={hiStall.y - 6} textAnchor="middle" className="text-[11px] font-bold" style={{ fill: 'rgb(var(--brand-berry))' }}>
             📍 {highlightText}
           </text>
         )}
@@ -130,6 +164,7 @@ export function MarketMap({
         <LegendSwatch fill="rgb(var(--brand-card))" border="rgb(var(--brand-line))" dashed label="Available" />
         <LegendSwatch fill="rgb(var(--brand-primary) / 0.15)" border="rgb(var(--brand-primary) / 0.5)" label="Filled" />
         <LegendSwatch fill="rgb(var(--brand-accent) / 0.85)" border="rgb(var(--brand-accent))" label="Highlighted" />
+        <LegendSwatch fill="rgb(var(--brand-muted) / 0.15)" border="rgb(var(--brand-muted) / 0.6)" dashed label="Disabled" />
       </div>
     </div>
   );
@@ -138,10 +173,7 @@ export function MarketMap({
 function LegendSwatch({ fill, border, label, dashed }: { fill: string; border: string; label: string; dashed?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span
-        className="h-3 w-4 rounded-sm"
-        style={{ background: fill, border: `1px ${dashed ? 'dashed' : 'solid'} ${border}` }}
-      />
+      <span className="h-3 w-4 rounded-sm" style={{ background: fill, border: `1px ${dashed ? 'dashed' : 'solid'} ${border}` }} />
       {label}
     </span>
   );

@@ -17,6 +17,7 @@ import { categoryEmoji, formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
 import { MarketGeoMap } from '@/components/MarketGeoMap';
 import { StallLayoutEditor } from '@/components/StallLayoutEditor';
+import { StallGridEditor } from '@/components/StallGridEditor';
 import { fetchMarketStalls } from '@/lib/stalls';
 import { CsvToolbar } from '@/components/CsvToolbar';
 
@@ -62,12 +63,14 @@ export function AdminStalls() {
     [currentMarketId],
     [],
   );
+  const disabledStalls = new Set(marketStalls.filter((s) => s.disabled).map((s) => s.label));
 
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [mapView, setMapView] = useState<'grid' | 'satellite'>('grid');
   const [editingLayout, setEditingLayout] = useState(false);
+  const [editingGridStalls, setEditingGridStalls] = useState(false);
   const [importPreview, setImportPreview] = useState<{ rows: ImportRow[]; skipped: number; dates: Set<string> } | null>(null);
 
   const confirmed = rows.filter((r) => r.status === 'confirmed');
@@ -139,6 +142,10 @@ export function AdminStalls() {
   async function clickCell(label: string) {
     if (!selectedRow) {
       setHint('Pick a vendor on the right first, then click stalls to place them.');
+      return;
+    }
+    if (disabledStalls.has(label) && !selectedRow.stalls.includes(label)) {
+      setHint(`${label} is disabled — re-enable it in Satellite → Edit layout to assign it.`);
       return;
     }
     const owner = confirmed.find((r) => r.stalls.includes(label));
@@ -343,6 +350,7 @@ export function AdminStalls() {
                 onClick={() => {
                   setMapView(m);
                   setEditingLayout(false);
+                  setEditingGridStalls(false);
                 }}
                 className={[
                   'rounded-full border px-3 py-1 text-sm font-medium transition',
@@ -354,6 +362,14 @@ export function AdminStalls() {
                 {m === 'grid' ? 'Grid' : '🛰 Satellite'}
               </button>
             ))}
+            {mapView === 'grid' && !editingGridStalls && currentMarketId && (
+              <button
+                onClick={() => setEditingGridStalls(true)}
+                className="rounded-full border border-brand-line bg-brand-card px-3 py-1 text-sm font-medium text-brand-ink/70 hover:bg-brand-paper"
+              >
+                ✏ Edit stalls
+              </button>
+            )}
             {mapView === 'satellite' && !editingLayout && currentMarketId && (
               <button
                 onClick={() => setEditingLayout(true)}
@@ -364,7 +380,20 @@ export function AdminStalls() {
             )}
           </div>
           {mapView === 'grid' ? (
-            <MarketMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} />
+            editingGridStalls && currentMarketId ? (
+              <StallGridEditor
+                key={currentMarketId}
+                marketId={currentMarketId}
+                initialStalls={marketStalls}
+                onSaved={() => {
+                  reloadStalls();
+                  setEditingGridStalls(false);
+                }}
+                onCancel={() => setEditingGridStalls(false)}
+              />
+            ) : (
+              <MarketMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} stalls={marketStalls} />
+            )
           ) : editingLayout && currentMarketId ? (
             <StallLayoutEditor
               key={currentMarketId}

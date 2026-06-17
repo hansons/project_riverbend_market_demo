@@ -15,9 +15,12 @@ const ATTRIB = 'Tiles © Esri, Maxar, Earthstar Geographics';
 const H = 1.25 / 111320; // half stall height (~2.5 m)
 const W = 1.5 / 79300; // half stall width (~3 m)
 
-function styleFor(occupied: boolean, highlighted: boolean): L.PathOptions {
+function styleFor(occupied: boolean, highlighted: boolean, disabled: boolean): L.PathOptions {
   if (highlighted) {
     return { color: 'rgb(var(--brand-accent))', weight: 2, fillColor: 'rgb(var(--brand-accent))', fillOpacity: 0.85 };
+  }
+  if (disabled) {
+    return { color: '#6b7280', weight: 1, dashArray: '2 3', fillColor: '#6b7280', fillOpacity: 0.5 };
   }
   if (occupied) {
     return { color: 'rgb(var(--brand-primary-dark))', weight: 1, fillColor: 'rgb(var(--brand-primary))', fillOpacity: 0.6 };
@@ -72,15 +75,20 @@ export function MarketGeoMap({
     const hiSet = new Set(Array.isArray(hi) ? hi : hi ? [hi] : []);
     for (const p of positions) {
       const occ = occMap[p.label];
+      const disabled = !!p.disabled;
       const rect = L.rectangle(
         [
           [p.lat - H, p.lng - W],
           [p.lat + H, p.lng + W],
         ],
-        styleFor(Boolean(occ), hiSet.has(p.label)),
+        styleFor(Boolean(occ), hiSet.has(p.label), disabled),
       );
-      rect.bindTooltip(occ ? `${p.label} — ${occ.name}` : `${p.label} — available`, { direction: 'top' });
+      rect.bindTooltip(
+        disabled ? `${p.label} — out of service` : occ ? `${p.label} — ${occ.name}` : `${p.label} — available`,
+        { direction: 'top' },
+      );
       rect.on('click', () => {
+        if (disabled) return; // disabled stalls aren't assignable
         const { onCellClick: cb, occupied: o } = state.current;
         if (cb) cb(p.label);
         else if (o[p.label]?.slug) navigate(`/vendor/${o[p.label]!.slug}`);
@@ -95,7 +103,7 @@ export function MarketGeoMap({
           keyboard: false,
           icon: L.divIcon({
             className: '',
-            html: `<div style="font:700 11px sans-serif;color:#fff;text-align:center;white-space:nowrap;text-shadow:0 0 2px #000,0 0 3px #000">${p.label}</div>`,
+            html: `<div style="font:700 11px sans-serif;color:#fff;text-align:center;white-space:nowrap;text-shadow:0 0 2px #000,0 0 3px #000;opacity:${disabled ? '0.6' : '1'}">${p.label}</div>`,
             iconSize: [28, 14],
             iconAnchor: [14, 7],
           }),

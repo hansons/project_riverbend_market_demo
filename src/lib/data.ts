@@ -53,20 +53,20 @@ export async function fetchVendorConfirmed(vendorId: string): Promise<{ market_d
   return ((data as { market_date_id: string; stalls: string[] }[]) ?? []).filter((r) => r.stalls && r.stalls.length);
 }
 
-/** The next date for a market on/after `fromISO` (used to highlight a visit list). */
-export async function fetchUpcomingDateForMarket(
-  marketId: string,
+/** The soonest market date on/after `fromISO`, with its market. The shopper's
+ *  visit map keys off this so it shows the same market (and placed stalls) the
+ *  vendor and admin satellite views do — i.e. the next market everyone's prepping. */
+export async function fetchUpcomingMarketDate(
   fromISO: string,
-): Promise<{ id: string; date: string } | null> {
+): Promise<{ id: string; market_id: string; date: string } | null> {
   if (!isSupabaseConfigured) return null;
   const { data } = await supabase
     .from('market_dates')
-    .select('id, date')
-    .eq('market_id', marketId)
+    .select('id, market_id, date')
     .gte('date', fromISO)
     .order('date')
     .limit(1);
-  return ((data as { id: string; date: string }[]) ?? [])[0] ?? null;
+  return ((data as { id: string; market_id: string; date: string }[]) ?? [])[0] ?? null;
 }
 
 /** Upcoming community events (on/after `fromISO`), with their market joined. */

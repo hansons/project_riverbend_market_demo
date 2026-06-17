@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAsync } from '@/lib/useAsync';
-import { fetchMarkets, fetchVendors, fetchAssignmentsForDate, fetchUpcomingDateForMarket } from '@/lib/data';
+import { fetchVendors, fetchAssignmentsForDate, fetchUpcomingMarketDate } from '@/lib/data';
 import { fetchMarketStalls, type StallPos } from '@/lib/stalls';
 import { formatDate } from '@/lib/format';
 import { navigate } from '@/lib/router';
@@ -25,12 +25,12 @@ export function VisitPanel() {
   const visit = useVisitList();
   const { data, loading } = useAsync(
     async () => {
-      const markets = await fetchMarkets();
-      const market = markets[0] ?? null;
-      const date = market ? await fetchUpcomingDateForMarket(market.id, todayISO()) : null;
+      // Key off the soonest upcoming market date (and its market) so the stalls +
+      // placements match the vendor and admin satellite views, not the flagship by sort.
+      const date = await fetchUpcomingMarketDate(todayISO());
       const [vendors, stalls, assignsRaw] = await Promise.all([
         fetchVendors(),
-        market ? fetchMarketStalls(market.id) : Promise.resolve([] as StallPos[]),
+        date ? fetchMarketStalls(date.market_id) : Promise.resolve([] as StallPos[]),
         date ? fetchAssignmentsForDate(date.id) : Promise.resolve([]),
       ]);
       const assigns: Assign[] = assignsRaw.map((a) => ({ stall: a.stall, slug: a.slug }));

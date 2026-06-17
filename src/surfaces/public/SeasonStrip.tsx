@@ -7,34 +7,42 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import type { SeasonItem, Vendor } from '@/lib/types';
 
 // The "this week" panel is built dynamically from what active vendors are
-// actually carrying in season (vendor_products), grouped into display
-// categories and enriched with the curated seasonality status/emoji/note when
-// an item name matches. Add a vendor or product and it shows up here on its own.
+// actually carrying in season (vendor_products), gathered into a few broad
+// display sections and enriched with the curated seasonality status/emoji/note
+// when an item name matches. Add a vendor or product and it shows up on its own.
 
 type ProductRow = { vendor_id: string; name: string; category: string | null; in_season: boolean };
 
-// Raw product categories → the labelled groups shown here, in render order.
+// Raw product categories collapse into a handful of broad sections (in render
+// order) so the panel stays compact. `cats` order also sub-orders items within
+// a section (e.g. veg before fruit inside "Fresh produce").
 const GROUPS: { key: string; label: string; emoji: string; cats: string[] }[] = [
   { key: 'prepared', label: 'Prepared foods & drinks', emoji: '🍴', cats: ['Prepared', 'Beverage', 'Coffee', 'Tea'] },
-  { key: 'veg', label: 'Vegetables', emoji: '🥬', cats: ['Vegetable'] },
-  { key: 'fruit', label: 'Fruit', emoji: '🍎', cats: ['Fruit'] },
-  { key: 'herb', label: 'Herbs', emoji: '🌿', cats: ['Herb'] },
-  { key: 'mushroom', label: 'Mushrooms', emoji: '🍄', cats: ['Mushroom'] },
+  { key: 'produce', label: 'Fresh produce', emoji: '🥬', cats: ['Vegetable', 'Fruit', 'Herb', 'Mushroom'] },
   { key: 'bakery', label: 'Bakery', emoji: '🍞', cats: ['Bread', 'Pastry'] },
-  { key: 'meat', label: 'Meat & eggs', emoji: '🥩', cats: ['Meat', 'Eggs'] },
+  { key: 'protein', label: 'Meat, eggs & seafood', emoji: '🥩', cats: ['Meat', 'Eggs', 'Seafood'] },
   { key: 'dairy', label: 'Cheese & dairy', emoji: '🧀', cats: ['Cheese', 'Dairy'] },
-  { key: 'seafood', label: 'Seafood', emoji: '🐟', cats: ['Seafood'] },
   { key: 'pantry', label: 'Pantry & sweets', emoji: '🍯', cats: ['Pantry', 'Confection', 'Pasta', 'Grain', 'Nuts'] },
-  { key: 'flowers', label: 'Flowers', emoji: '💐', cats: ['Flowers'] },
-  { key: 'plants', label: 'Plants & trees', emoji: '🌱', cats: ['Plant'] },
-  { key: 'body', label: 'Body & home', emoji: '🧼', cats: ['Body', 'Home'] },
-  { key: 'art', label: 'Art & crafts', emoji: '🎨', cats: ['Art'] },
-  { key: 'services', label: 'Services', emoji: '🛠️', cats: ['Service'] },
+  { key: 'flowers', label: 'Flowers, plants & trees', emoji: '💐', cats: ['Flowers', 'Plant'] },
+  { key: 'crafts', label: 'Crafts & services', emoji: '🛠️', cats: ['Body', 'Home', 'Art', 'Service'] },
 ];
 const CAT_TO_GROUP = new Map<string, (typeof GROUPS)[number]>();
 for (const g of GROUPS) for (const c of g.cats) CAT_TO_GROUP.set(c, g);
 
-// Available-now items lead each group; "coming" trails.
+// Default emoji per raw category, so items keep a fitting glyph even inside a
+// merged section (a fruit shows 🍎 within "Fresh produce").
+const CAT_EMOJI: Record<string, string> = {
+  Prepared: '🍴', Beverage: '🥤', Coffee: '☕', Tea: '🍵',
+  Vegetable: '🥬', Fruit: '🍎', Herb: '🌿', Mushroom: '🍄',
+  Bread: '🍞', Pastry: '🥐',
+  Meat: '🥩', Eggs: '🥚', Seafood: '🐟',
+  Cheese: '🧀', Dairy: '🥛',
+  Pantry: '🍯', Confection: '🍫', Pasta: '🍝', Grain: '🌾', Nuts: '🌰',
+  Flowers: '💐', Plant: '🌱',
+  Body: '🧼', Home: '🕯️', Art: '🎨', Service: '🛠️',
+};
+
+// Available-now items lead each section; "coming" trails.
 const STATUS_RANK: Record<string, number> = { peak: 0, ready: 0, ending: 1, coming: 3 };
 const rankOf = (status: string | null) => (status == null ? 2 : STATUS_RANK[status] ?? 2);
 
@@ -45,7 +53,7 @@ function shareWord(a: string, b: string): boolean {
   return false;
 }
 
-type Offered = { name: string; emoji: string; status: string | null; note: string | null; carriers: Vendor[] };
+type Offered = { name: string; cat: string; emoji: string; status: string | null; note: string | null; carriers: Vendor[] };
 
 export function SeasonStrip({ layout = 'stacked' }: { layout?: 'stacked' | 'split' } = {}) {
   const { data, loading } = useAsync(
@@ -71,7 +79,8 @@ export function SeasonStrip({ layout = 'stacked' }: { layout?: 'stacked' | 'spli
     if (!p.in_season) continue;
     const vendor = vendorById.get(p.vendor_id); // active vendors only
     if (!vendor) continue;
-    const g = CAT_TO_GROUP.get((p.category ?? '').trim());
+    const cat = (p.category ?? '').trim();
+    const g = CAT_TO_GROUP.get(cat);
     if (!g) continue;
     const nameKey = p.name.trim().toLowerCase();
     let bucket = buckets.get(g.key);
@@ -81,7 +90,8 @@ export function SeasonStrip({ layout = 'stacked' }: { layout?: 'stacked' | 'spli
       const s = seasonFor(p.name);
       entry = {
         name: p.name.trim(),
-        emoji: s?.emoji ?? g.emoji,
+        cat,
+        emoji: s?.emoji ?? CAT_EMOJI[cat] ?? g.emoji,
         status: s?.status ?? null,
         note: s?.note ?? null,
         carriers: [],
@@ -91,12 +101,19 @@ export function SeasonStrip({ layout = 'stacked' }: { layout?: 'stacked' | 'spli
     if (!entry.carriers.some((c) => c.id === vendor.id)) entry.carriers.push(vendor);
   }
 
-  const groupList = GROUPS.filter((g) => buckets.get(g.key)?.size).map((g) => ({
-    ...g,
-    items: [...buckets.get(g.key)!.values()].sort(
-      (a, b) => rankOf(a.status) - rankOf(b.status) || a.name.localeCompare(b.name),
-    ),
-  }));
+  const groupList = GROUPS.filter((g) => buckets.get(g.key)?.size).map((g) => {
+    const catRank = (c: string) => {
+      const i = g.cats.indexOf(c);
+      return i === -1 ? g.cats.length : i;
+    };
+    return {
+      ...g,
+      items: [...buckets.get(g.key)!.values()].sort(
+        (a, b) =>
+          catRank(a.cat) - catRank(b.cat) || rankOf(a.status) - rankOf(b.status) || a.name.localeCompare(b.name),
+      ),
+    };
+  });
 
   if (!groupList.length) {
     return <p className="text-sm text-brand-muted">No vendors have posted availability yet this week.</p>;

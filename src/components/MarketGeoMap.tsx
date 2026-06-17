@@ -2,21 +2,16 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { navigate } from '@/lib/router';
+import { DEFAULT_CENTER, generateStallGrid, type StallPos } from '@/lib/stalls';
 import type { MapOccupant } from './MarketMap';
 
-// Satellite stall map: the same A–D × 12 stall scheme as MarketMap, but plotted on
-// a Leaflet map over free Esri World Imagery tiles. Stall positions are generated
-// as a grid around a market center (display-first; a drag-to-place editor and
-// per-market coordinates come later). Same props as MarketMap so it's a drop-in.
+// Satellite stall map over free Esri World Imagery tiles. Renders saved stall
+// coordinates (from market_stalls) when provided, otherwise the default generated
+// grid. Same occupancy coloring + click behavior as MarketMap, so it's a drop-in.
 
-// Corvallis Farmers' Market (riverfront) — the demo's example location.
-const DEFAULT_CENTER: [number, number] = [44.5663, -123.2566];
-const ROWS = ['A', 'B', 'C', 'D'];
-const COLS = 12;
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const ATTRIB = 'Tiles © Esri, Maxar, Earthstar Geographics';
 
-// Degree offsets at ~44.57°N (≈111,320 m/° lat, ≈79,300 m/° lng).
-const ROW_D = 7 / 111320; // ~7 m row spacing
-const COL_D = 4 / 79300; // ~4 m column spacing
 const H = 1.25 / 111320; // half stall height (~2.5 m)
 const W = 1.5 / 79300; // half stall width (~3 m)
 
@@ -34,28 +29,30 @@ export function MarketGeoMap({
   occupied = {},
   highlight,
   onCellClick,
+  stalls,
   center = DEFAULT_CENTER,
 }: {
   occupied?: Record<string, MapOccupant>;
   highlight?: string | string[] | null;
   onCellClick?: (label: string) => void;
+  stalls?: StallPos[];
   center?: [number, number];
 }) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
-  // Latest values for the click/redraw closures, so we never go stale.
-  const state = useRef({ occupied, highlight, onCellClick });
-  state.current = { occupied, highlight, onCellClick };
+  const state = useRef({ occupied, highlight, onCellClick, stalls, center });
+  state.current = { occupied, highlight, onCellClick, stalls, center };
 
-  // Create the map once.
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
-    const map = L.map(elRef.current, { center, zoom: 19, scrollWheelZoom: false });
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    const positions = state.current.stalls?.length ? state.current.stalls : generateStallGrid(state.current.center);
+    const map = L.map(elRef.current, { scrollWheelZoom: false });
+    L.tileLayer(ESRI, { maxZoom: 20, attribution: ATTRIB }).addTo(map);
+    map.fitBounds(L.latLngBounds(positions.map((p) => [p.lat, p.lng] as [number, number])), {
+      padding: [40, 40],
       maxZoom: 20,
-      attribution: 'Tiles © Esri, Maxar, Earthstar Geographics',
-    }).addTo(map);
+    });
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
     return () => {
@@ -66,36 +63,32 @@ export function MarketGeoMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Draw / recolor stalls whenever occupancy or highlight changes.
   useEffect(() => {
     const layer = layerRef.current;
     if (!layer) return;
     layer.clearLayers();
-    const hiSet = new Set(Array.isArray(highlight) ? highlight : highlight ? [highlight] : []);
-    ROWS.forEach((r, ri) => {
-      for (let ci = 0; ci < COLS; ci++) {
-        const label = `${r}${ci + 1}`;
-        const lat = center[0] - (ri - 1.5) * ROW_D;
-        const lng = center[1] + (ci - 5.5) * COL_D;
-        const occ = state.current.occupied[label];
-        const rect = L.rectangle(
-          [
-            [lat - H, lng - W],
-            [lat + H, lng + W],
-          ],
-          styleFor(Boolean(occ), hiSet.has(label)),
-        );
-        rect.bindTooltip(occ ? `${label} — ${occ.name}` : `${label} — available`, { direction: 'top' });
-        rect.on('click', () => {
-          const { onCellClick: cb, occupied: occMap } = state.current;
-          if (cb) cb(label);
-          else if (occMap[label]?.slug) navigate(`/vendor/${occMap[label]!.slug}`);
-        });
-        layer.addLayer(rect);
-      }
-    });
+    const { occupied: occMap, highlight: hi, stalls: st, center: ctr } = state.current;
+    const positions = st?.length ? st : generateStallGrid(ctr);
+    const hiSet = new Set(Array.isArray(hi) ? hi : hi ? [hi] : []);
+    for (const p of positions) {
+      const occ = occMap[p.label];
+      const rect = L.rectangle(
+        [
+          [p.lat - H, p.lng - W],
+          [p.lat + H, p.lng + W],
+        ],
+        styleFor(Boolean(occ), hiSet.has(p.label)),
+      );
+      rect.bindTooltip(occ ? `${p.label} — ${occ.name}` : `${p.label} — available`, { direction: 'top' });
+      rect.on('click', () => {
+        const { onCellClick: cb, occupied: o } = state.current;
+        if (cb) cb(p.label);
+        else if (o[p.label]?.slug) navigate(`/vendor/${o[p.label]!.slug}`);
+      });
+      layer.addLayer(rect);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [occupied, highlight, center]);
+  }, [occupied, highlight, stalls, center]);
 
   return (
     <div>

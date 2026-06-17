@@ -16,6 +16,8 @@ import { downloadCSV, parseCSVObjects, toCSV } from '@/lib/csv';
 import { categoryEmoji, formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
 import { MarketGeoMap } from '@/components/MarketGeoMap';
+import { StallLayoutEditor } from '@/components/StallLayoutEditor';
+import { fetchMarketStalls } from '@/lib/stalls';
 import { CsvToolbar } from '@/components/CsvToolbar';
 
 const TOTAL_STALLS = 48; // A–D × 12
@@ -54,10 +56,18 @@ export function AdminStalls() {
     [],
   );
 
+  const currentMarketId = dates.find((d) => d.id === dateId)?.market_id ?? null;
+  const { data: marketStalls, reload: reloadStalls } = useAsync(
+    () => (currentMarketId ? fetchMarketStalls(currentMarketId) : Promise.resolve([])),
+    [currentMarketId],
+    [],
+  );
+
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [mapView, setMapView] = useState<'grid' | 'satellite'>('grid');
+  const [editingLayout, setEditingLayout] = useState(false);
   const [importPreview, setImportPreview] = useState<{ rows: ImportRow[]; skipped: number; dates: Set<string> } | null>(null);
 
   const confirmed = rows.filter((r) => r.status === 'confirmed');
@@ -326,11 +336,14 @@ export function AdminStalls() {
 
       {!loading && dateId && (
         <div>
-          <div className="mb-2 flex gap-1.5">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
             {(['grid', 'satellite'] as const).map((m) => (
               <button
                 key={m}
-                onClick={() => setMapView(m)}
+                onClick={() => {
+                  setMapView(m);
+                  setEditingLayout(false);
+                }}
                 className={[
                   'rounded-full border px-3 py-1 text-sm font-medium transition',
                   mapView === m
@@ -341,11 +354,36 @@ export function AdminStalls() {
                 {m === 'grid' ? 'Grid' : '🛰 Satellite'}
               </button>
             ))}
+            {mapView === 'satellite' && !editingLayout && currentMarketId && (
+              <button
+                onClick={() => setEditingLayout(true)}
+                className="rounded-full border border-brand-line bg-brand-card px-3 py-1 text-sm font-medium text-brand-ink/70 hover:bg-brand-paper"
+              >
+                ✏ Edit layout
+              </button>
+            )}
           </div>
           {mapView === 'grid' ? (
             <MarketMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} />
+          ) : editingLayout && currentMarketId ? (
+            <StallLayoutEditor
+              key={currentMarketId}
+              marketId={currentMarketId}
+              initialStalls={marketStalls}
+              onSaved={() => {
+                reloadStalls();
+                setEditingLayout(false);
+              }}
+              onCancel={() => setEditingLayout(false)}
+            />
           ) : (
-            <MarketGeoMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} />
+            <MarketGeoMap
+              key={currentMarketId ?? 'none'}
+              occupied={occupied}
+              highlight={selectedRow?.stalls ?? null}
+              onCellClick={clickCell}
+              stalls={marketStalls}
+            />
           )}
         </div>
       )}

@@ -39,7 +39,7 @@ export function VisitPanel() {
     [],
     { vendors: [] as Vendor[], stalls: [] as StallPos[], assigns: [] as Assign[], dateISO: null as string | null },
   );
-  const [view, setView] = useState<'grid' | 'satellite'>('grid');
+  const [view, setView] = useState<'grid' | 'satellite'>('satellite');
 
   if (!visit.count) {
     return (
@@ -74,11 +74,11 @@ export function VisitPanel() {
         </div>
         <div className="flex items-center gap-2">
           <div className="inline-flex overflow-hidden rounded-lg border border-brand-line text-xs">
-            <button onClick={() => setView('grid')} className={view === 'grid' ? tabActive : tabIdle}>
-              Grid
-            </button>
             <button onClick={() => setView('satellite')} className={view === 'satellite' ? tabActive : tabIdle}>
               Satellite
+            </button>
+            <button onClick={() => setView('grid')} className={view === 'grid' ? tabActive : tabIdle}>
+              Grid
             </button>
           </div>
           <button onClick={visit.clear} className="text-xs font-semibold text-status-alert hover:underline">

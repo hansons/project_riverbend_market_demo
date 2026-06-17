@@ -19,7 +19,7 @@ export function StallGridEditor({
   onCancel: () => void;
 }) {
   const [items, setItems] = useState<StallItem[]>(() =>
-    initialStalls.map((s) => ({ label: s.label, disabled: !!s.disabled })),
+    initialStalls.map((s) => ({ label: s.label, disabled: !!s.disabled, category: s.category ?? undefined })),
   );
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -40,6 +40,10 @@ export function StallGridEditor({
     setItems((cur) => cur.map((i) => (i.label === label ? { ...i, disabled: !i.disabled } : i)));
     setDirty(true);
   }
+  function setCategory(label: string, category: string) {
+    setItems((cur) => cur.map((i) => (i.label === label ? { ...i, category } : i)));
+    setDirty(true);
+  }
 
   async function save() {
     setSaving(true);
@@ -47,7 +51,7 @@ export function StallGridEditor({
     const byLabel = new Map(initialStalls.map((s) => [s.label, s]));
     const stalls: StallPos[] = items.map((it) => {
       const [lat, lng] = coordForLabel(it.label, byLabel.get(it.label));
-      return { label: it.label, lat, lng, disabled: it.disabled };
+      return { label: it.label, lat, lng, disabled: it.disabled, category: it.category };
     });
     const err = await saveMarketStalls(marketId, stalls);
     setSaving(false);
@@ -66,9 +70,9 @@ export function StallGridEditor({
           Add, remove, or disable stalls. New stalls drop onto the satellite map at the market center —
           switch to Satellite to position them.
         </p>
-        <MarketMap stalls={items} />
+        <MarketMap stalls={items} colorBy="category" />
       </div>
-      <StallSetList items={items} onAdd={add} onRemove={remove} onToggleDisable={toggle} />
+      <StallSetList items={items} onAdd={add} onRemove={remove} onToggleDisable={toggle} onSetCategory={setCategory} />
       <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
         <button className="btn-primary" onClick={save} disabled={saving || !dirty}>
           {saving ? 'Saving…' : 'Save stalls'}

@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { centroid, DEFAULT_CENTER, generateStallGrid, saveMarketStalls, type StallPos } from '@/lib/stalls';
+import { categoryColor, centroid, DEFAULT_CENTER, generateStallGrid, saveMarketStalls, type StallPos } from '@/lib/stalls';
 import { StallSetList, type StallItem } from './StallSetList';
 
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const ATTRIB = 'Tiles © Esri, Maxar, Earthstar Geographics';
 
-function stallIcon(label: string, disabled: boolean): L.DivIcon {
-  const bg = disabled ? '#6b7280' : 'rgb(var(--brand-primary))';
+function stallIcon(label: string, disabled: boolean, category?: string): L.DivIcon {
+  const bg = disabled ? '#6b7280' : categoryColor(category) ?? 'rgb(var(--brand-primary))';
   return L.divIcon({
     className: '',
     html: `<div style="opacity:${disabled ? 0.75 : 1};background:${bg};color:#fff;border:1px solid rgba(0,0,0,.4);border-radius:5px;font:600 11px sans-serif;display:flex;align-items:center;justify-content:center;width:30px;height:22px;box-shadow:0 1px 3px rgba(0,0,0,.45)">${label}</div>`,
@@ -48,7 +48,7 @@ export function StallLayoutEditor({
     L.tileLayer(ESRI, { maxZoom: 20, attribution: ATTRIB }).addTo(map);
     map.fitBounds(L.latLngBounds(start.map((s) => [s.lat, s.lng] as [number, number])), { padding: [40, 40], maxZoom: 20 });
     mapRef.current = map;
-    setItems(start.map((s) => ({ label: s.label, disabled: !!s.disabled })));
+    setItems(start.map((s) => ({ label: s.label, disabled: !!s.disabled, category: s.category ?? undefined })));
     return () => {
       map.remove();
       mapRef.current = null;
@@ -73,9 +73,9 @@ export function StallLayoutEditor({
       posRef.current[it.label] = pos;
       const existing = markersRef.current[it.label];
       if (existing) {
-        existing.setIcon(stallIcon(it.label, it.disabled));
+        existing.setIcon(stallIcon(it.label, it.disabled, it.category));
       } else {
-        const marker = L.marker(pos, { draggable: true, icon: stallIcon(it.label, it.disabled) }).addTo(map);
+        const marker = L.marker(pos, { draggable: true, icon: stallIcon(it.label, it.disabled, it.category) }).addTo(map);
         marker.on('dragend', () => {
           const ll = marker.getLatLng();
           posRef.current[it.label] = [ll.lat, ll.lng];
@@ -104,6 +104,10 @@ export function StallLayoutEditor({
     setItems((cur) => cur.map((i) => (i.label === label ? { ...i, disabled: !i.disabled } : i)));
     setDirty(true);
   }
+  function setCategory(label: string, category: string) {
+    setItems((cur) => cur.map((i) => (i.label === label ? { ...i, category } : i)));
+    setDirty(true);
+  }
 
   function resetGrid() {
     const center = centroid(Object.values(posRef.current).map(([lat, lng]) => ({ label: '', lat, lng }))) ?? DEFAULT_CENTER;
@@ -123,6 +127,7 @@ export function StallLayoutEditor({
       lat: posRef.current[it.label][0],
       lng: posRef.current[it.label][1],
       disabled: it.disabled,
+      category: it.category,
     }));
     const err = await saveMarketStalls(marketId, stalls);
     setSaving(false);
@@ -142,7 +147,7 @@ export function StallLayoutEditor({
         </p>
         <div ref={elRef} className="h-[440px] w-full overflow-hidden rounded-2xl border border-brand-line" />
       </div>
-      <StallSetList items={items} onAdd={addStall} onRemove={removeStall} onToggleDisable={toggleDisable} />
+      <StallSetList items={items} onAdd={addStall} onRemove={removeStall} onToggleDisable={toggleDisable} onSetCategory={setCategory} />
       <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
         <button className="btn-primary" onClick={save} disabled={saving || !dirty}>
           {saving ? 'Saving…' : 'Save layout'}

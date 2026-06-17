@@ -71,6 +71,7 @@ export function AdminStalls() {
   const [mapView, setMapView] = useState<'grid' | 'satellite'>('grid');
   const [editingLayout, setEditingLayout] = useState(false);
   const [editingGridStalls, setEditingGridStalls] = useState(false);
+  const [colorBy, setColorBy] = useState<'status' | 'category'>('status');
   const [importPreview, setImportPreview] = useState<{ rows: ImportRow[]; skipped: number; dates: Set<string> } | null>(null);
 
   const confirmed = rows.filter((r) => r.status === 'confirmed');
@@ -378,6 +379,23 @@ export function AdminStalls() {
                 ✏ Edit layout
               </button>
             )}
+            {!editingLayout && !editingGridStalls && (
+              <span className="ml-auto inline-flex items-center gap-1 text-xs text-brand-muted">
+                Color:
+                {(['status', 'category'] as const).map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setColorBy(c)}
+                    className={[
+                      'rounded-full border px-2 py-0.5 font-medium capitalize transition',
+                      colorBy === c ? 'border-brand-primary bg-brand-primary text-white' : 'border-brand-line bg-brand-card text-brand-ink/70',
+                    ].join(' ')}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </span>
+            )}
           </div>
           {mapView === 'grid' ? (
             editingGridStalls && currentMarketId ? (
@@ -392,7 +410,7 @@ export function AdminStalls() {
                 onCancel={() => setEditingGridStalls(false)}
               />
             ) : (
-              <MarketMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} stalls={marketStalls} />
+              <MarketMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} stalls={marketStalls} colorBy={colorBy} />
             )
           ) : editingLayout && currentMarketId ? (
             <StallLayoutEditor
@@ -412,6 +430,7 @@ export function AdminStalls() {
               highlight={selectedRow?.stalls ?? null}
               onCellClick={clickCell}
               stalls={marketStalls}
+              colorBy={colorBy}
             />
           )}
         </div>

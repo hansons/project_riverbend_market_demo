@@ -1,9 +1,10 @@
 import { navigate } from '@/lib/router';
+import { categoryColor } from '@/lib/stalls';
 
 // A themeable stall map. Renders the market's stall SET (from market_stalls when
 // passed in), arranged into rows by parsing labels (A1 → row A, col 1); labels that
 // don't fit go in an overflow row. Falls back to a fixed A–D × 12 grid when no set
-// is provided (so views that don't pass one are unchanged). Cells color by state.
+// is provided. Cells color by occupancy state, or by category when colorBy='category'.
 const DEFAULT_ROWS = ['A', 'B', 'C', 'D'];
 const DEFAULT_COLS = 12;
 const CW = 60;
@@ -21,6 +22,7 @@ export interface MapOccupant {
 export interface GridStall {
   label: string;
   disabled?: boolean;
+  category?: string | null;
 }
 
 function defaultStalls(): GridStall[] {
@@ -32,6 +34,7 @@ function defaultStalls(): GridStall[] {
 interface Placed {
   label: string;
   disabled: boolean;
+  category?: string | null;
   x: number;
   y: number;
 }
@@ -55,14 +58,14 @@ function layout(stalls: GridStall[]): { placed: Placed[]; vbW: number; vbH: numb
   rowKeys.forEach((key, ri) => {
     for (const { col, s } of rows.get(key)!.sort((a, b) => a.col - b.col)) {
       maxCol = Math.max(maxCol, col);
-      placed.push({ label: s.label, disabled: !!s.disabled, x: PADX + (col - 1) * (CW + GX), y: PADY + ri * (CH + GY) });
+      placed.push({ label: s.label, disabled: !!s.disabled, category: s.category, x: PADX + (col - 1) * (CW + GX), y: PADY + ri * (CH + GY) });
     }
   });
   if (overflow.length) {
     const ri = rowKeys.length;
     overflow.forEach((s, i) => {
       maxCol = Math.max(maxCol, i + 1);
-      placed.push({ label: s.label, disabled: !!s.disabled, x: PADX + i * (CW + GX), y: PADY + ri * (CH + GY) });
+      placed.push({ label: s.label, disabled: !!s.disabled, category: s.category, x: PADX + i * (CW + GX), y: PADY + ri * (CH + GY) });
     });
   }
   const rowCount = rowKeys.length + (overflow.length ? 1 : 0);
@@ -75,17 +78,22 @@ export function MarketMap({
   highlightText,
   onCellClick,
   stalls,
+  colorBy = 'status',
 }: {
   occupied?: Record<string, MapOccupant>;
   highlight?: string | string[] | null;
   highlightText?: string;
   onCellClick?: (label: string) => void;
   stalls?: GridStall[];
+  colorBy?: 'status' | 'category';
 }) {
   const set = stalls && stalls.length ? stalls : defaultStalls();
   const { placed, vbW, vbH } = layout(set);
   const hiSet = new Set(Array.isArray(highlight) ? highlight : highlight ? [highlight] : []);
   const hiStall = placed.find((s) => hiSet.has(s.label));
+  const byCategory = colorBy === 'category';
+  const cats = byCategory ? [...new Set(placed.map((p) => (p.category ?? '').trim()).filter(Boolean))].sort() : [];
+  const hasUncategorized = byCategory && placed.some((p) => !p.category || !p.category.trim());
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-brand-line bg-brand-paper p-3">
@@ -97,10 +105,12 @@ export function MarketMap({
         {placed.map((s) => {
           const occ = occupied[s.label];
           const isHi = hiSet.has(s.label);
+          const catColor = categoryColor(s.category);
           let fill: string;
           let stroke: string;
           let textFill: string;
           let dash: string | undefined;
+          let fillOpacity: number | undefined;
           if (s.disabled) {
             fill = 'rgb(var(--brand-muted) / 0.15)';
             stroke = 'rgb(var(--brand-muted) / 0.6)';
@@ -110,6 +120,12 @@ export function MarketMap({
             fill = 'rgb(var(--brand-accent) / 0.85)';
             stroke = 'rgb(var(--brand-accent))';
             textFill = 'rgb(var(--brand-ink))';
+          } else if (byCategory && catColor) {
+            fill = catColor;
+            stroke = catColor;
+            textFill = 'rgb(var(--brand-ink))';
+            fillOpacity = occ ? 0.55 : 0.3;
+            dash = occ ? undefined : '3 3';
           } else if (occ) {
             fill = 'rgb(var(--brand-primary) / 0.15)';
             stroke = 'rgb(var(--brand-primary) / 0.5)';
@@ -131,14 +147,17 @@ export function MarketMap({
               }}
               style={{ cursor: clickable ? 'pointer' : 'default' }}
             >
-              <title>{s.disabled ? `${s.label} — out of service` : occ ? `${s.label} — ${occ.name}` : `${s.label} — available`}</title>
+              <title>
+                {s.label}
+                {s.category ? ` · ${s.category}` : ''} — {s.disabled ? 'out of service' : occ ? occ.name : 'available'}
+              </title>
               <rect
                 x={s.x}
                 y={s.y}
                 width={CW}
                 height={CH}
                 rx={6}
-                style={{ fill, stroke, strokeWidth: isHi && !s.disabled ? 2 : 1, strokeDasharray: dash }}
+                style={{ fill, fillOpacity, stroke, strokeWidth: isHi && !s.disabled ? 2 : 1, strokeDasharray: dash }}
               />
               <text
                 x={s.x + CW / 2}
@@ -161,10 +180,23 @@ export function MarketMap({
       </svg>
 
       <div className="mt-2 flex flex-wrap gap-3 px-1 text-[11px] text-brand-muted">
-        <LegendSwatch fill="rgb(var(--brand-card))" border="rgb(var(--brand-line))" dashed label="Available" />
-        <LegendSwatch fill="rgb(var(--brand-primary) / 0.15)" border="rgb(var(--brand-primary) / 0.5)" label="Filled" />
-        <LegendSwatch fill="rgb(var(--brand-accent) / 0.85)" border="rgb(var(--brand-accent))" label="Highlighted" />
-        <LegendSwatch fill="rgb(var(--brand-muted) / 0.15)" border="rgb(var(--brand-muted) / 0.6)" dashed label="Disabled" />
+        {byCategory ? (
+          <>
+            {cats.map((c) => (
+              <LegendSwatch key={c} fill={categoryColor(c) ?? '#9ca3af'} border={categoryColor(c) ?? '#9ca3af'} label={c} />
+            ))}
+            {hasUncategorized && <LegendSwatch fill="rgb(var(--brand-card))" border="rgb(var(--brand-line))" dashed label="Uncategorized" />}
+            <LegendSwatch fill="rgb(var(--brand-muted) / 0.15)" border="rgb(var(--brand-muted) / 0.6)" dashed label="Disabled" />
+            <span className="text-brand-muted/80">· dashed = open, solid = assigned</span>
+          </>
+        ) : (
+          <>
+            <LegendSwatch fill="rgb(var(--brand-card))" border="rgb(var(--brand-line))" dashed label="Available" />
+            <LegendSwatch fill="rgb(var(--brand-primary) / 0.15)" border="rgb(var(--brand-primary) / 0.5)" label="Filled" />
+            <LegendSwatch fill="rgb(var(--brand-accent) / 0.85)" border="rgb(var(--brand-accent))" label="Highlighted" />
+            <LegendSwatch fill="rgb(var(--brand-muted) / 0.15)" border="rgb(var(--brand-muted) / 0.6)" dashed label="Disabled" />
+          </>
+        )}
       </div>
     </div>
   );

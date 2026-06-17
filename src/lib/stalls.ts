@@ -16,6 +16,7 @@ export interface StallPos {
   lat: number;
   lng: number;
   disabled?: boolean;
+  category?: string | null;
 }
 
 /** The default A–D × 12 stall grid around a center (matches the 0022 seed). */
@@ -41,6 +42,20 @@ export function coordForLabel(label: string, existing?: StallPos, center: [numbe
   return g ? [g.lat, g.lng] : center;
 }
 
+// Deterministic color per category (so the same category — incl. custom ones —
+// always gets the same swatch). Returns null for no category.
+const CATEGORY_PALETTE = [
+  '#e11d48', '#f59e0b', '#16a34a', '#0ea5e9', '#8b5cf6', '#0d9488',
+  '#ea580c', '#4f46e5', '#db2777', '#65a30d', '#06b6d4', '#c026d3',
+];
+export function categoryColor(category?: string | null): string | null {
+  const s = (category ?? '').trim().toLowerCase();
+  if (!s) return null;
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return CATEGORY_PALETTE[h % CATEGORY_PALETTE.length];
+}
+
 export function centroid(stalls: StallPos[]): [number, number] | null {
   if (!stalls.length) return null;
   const lat = stalls.reduce((s, p) => s + p.lat, 0) / stalls.length;
@@ -50,7 +65,7 @@ export function centroid(stalls: StallPos[]): [number, number] | null {
 
 /** Saved stall coordinates for a market (empty if the layout hasn't been placed). */
 export async function fetchMarketStalls(marketId: string): Promise<StallPos[]> {
-  const { data } = await supabase.from('market_stalls').select('label, lat, lng, disabled').eq('market_id', marketId);
+  const { data } = await supabase.from('market_stalls').select('label, lat, lng, disabled, category').eq('market_id', marketId);
   return (data as StallPos[]) ?? [];
 }
 
@@ -59,7 +74,14 @@ export async function saveMarketStalls(marketId: string, stalls: StallPos[]): Pr
   const del = await supabase.from('market_stalls').delete().eq('market_id', marketId);
   if (del.error) return del.error.message;
   if (!stalls.length) return null;
-  const rows = stalls.map((s) => ({ market_id: marketId, label: s.label, lat: s.lat, lng: s.lng, disabled: !!s.disabled }));
+  const rows = stalls.map((s) => ({
+    market_id: marketId,
+    label: s.label,
+    lat: s.lat,
+    lng: s.lng,
+    disabled: !!s.disabled,
+    category: s.category?.trim() || null,
+  }));
   const { error } = await supabase.from('market_stalls').insert(rows);
   return error?.message ?? null;
 }

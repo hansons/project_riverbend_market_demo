@@ -3,6 +3,8 @@ import { fetchMarketDates, fetchMySchedule, setScheduleStatus } from '@/lib/vend
 import { useAsync } from '@/lib/useAsync';
 import { formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
+import { MarketGeoMap } from '@/components/MarketGeoMap';
+import { fetchMarketStalls } from '@/lib/stalls';
 import type { ScheduleStatus, Vendor } from '@/lib/types';
 
 function todayISO(): string {
@@ -21,8 +23,26 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
   const { data: dates, loading: datesLoading } = useAsync(fetchMarketDates, [], []);
   const { data: sched, loading: schedLoading, reload } = useAsync(() => fetchMySchedule(vendor.id), [vendor.id], []);
   const [busy, setBusy] = useState<string | null>(null);
+  const [mapView, setMapView] = useState<'satellite' | 'grid'>('satellite');
 
+  const today = todayISO();
+  const upcomingDates = dates.filter((d) => d.date >= today);
   const byDate = new Map(sched.map((s) => [s.market_date_id, s]));
+  const myStops = sched
+    .filter((s) => s.status === 'confirmed' && s.stalls.some((st) => /^[A-D]\d+$/.test(st)))
+    .map((s) => ({ s, d: dates.find((x) => x.id === s.market_date_id) }))
+    .filter((x) => x.d && x.d.date >= today)
+    .sort((a, b) => a.d!.date.localeCompare(b.d!.date));
+  const myNext = myStops[0];
+
+  // Saved stall positions for the next stop's market, so the satellite view shows
+  // the real placement; the vendor's assigned stall(s) are highlighted.
+  const marketId = myNext?.d?.market_id ?? null;
+  const { data: marketStalls, loading: stallsLoading } = useAsync(
+    () => (marketId ? fetchMarketStalls(marketId) : Promise.resolve([])),
+    [marketId],
+    [],
+  );
 
   async function set(dateId: string, status: ScheduleStatus) {
     setBusy(dateId);
@@ -33,15 +53,6 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
 
   const loading = datesLoading || schedLoading;
 
-  const today = todayISO();
-  const upcomingDates = dates.filter((d) => d.date >= today);
-  const myStops = sched
-    .filter((s) => s.status === 'confirmed' && s.stalls.some((st) => /^[A-D]\d+$/.test(st)))
-    .map((s) => ({ s, d: dates.find((x) => x.id === s.market_date_id) }))
-    .filter((x) => x.d && x.d.date >= today)
-    .sort((a, b) => a.d!.date.localeCompare(b.d!.date));
-  const myNext = myStops[0];
-
   return (
     <div className="card p-6">
       <h2 className="text-xl">Market schedule</h2>
@@ -51,10 +62,51 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
 
       {myNext && (
         <div className="mt-4">
-          <MarketMap
-            highlight={myNext.s.stalls}
-            highlightText={`You · ${myNext.d!.markets?.name ?? ''} ${formatDate(myNext.d!.date)}`}
-          />
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium text-brand-ink">
+              📍 Your spot · {myNext.d!.markets?.name ?? 'Market'} {formatDate(myNext.d!.date)}
+              {myNext.s.stalls.length > 0 && (
+                <span className="text-brand-muted">
+                  {' '}
+                  — Stall{myNext.s.stalls.length > 1 ? 's' : ''} {myNext.s.stalls.join(', ')}
+                </span>
+              )}
+            </p>
+            <div className="inline-flex overflow-hidden rounded-lg border border-brand-line text-xs">
+              <button
+                onClick={() => setMapView('satellite')}
+                className={
+                  mapView === 'satellite'
+                    ? 'bg-brand-primary px-3 py-1 font-semibold text-white'
+                    : 'px-3 py-1 text-brand-ink/75 hover:bg-brand-paper'
+                }
+              >
+                Satellite
+              </button>
+              <button
+                onClick={() => setMapView('grid')}
+                className={
+                  mapView === 'grid'
+                    ? 'bg-brand-primary px-3 py-1 font-semibold text-white'
+                    : 'px-3 py-1 text-brand-ink/75 hover:bg-brand-paper'
+                }
+              >
+                Grid
+              </button>
+            </div>
+          </div>
+          {mapView === 'satellite' ? (
+            stallsLoading ? (
+              <div className="h-[440px] animate-pulse rounded-2xl bg-brand-paper" />
+            ) : (
+              <MarketGeoMap stalls={marketStalls} highlight={myNext.s.stalls} />
+            )
+          ) : (
+            <MarketMap
+              highlight={myNext.s.stalls}
+              highlightText={`You · ${myNext.d!.markets?.name ?? ''} ${formatDate(myNext.d!.date)}`}
+            />
+          )}
         </div>
       )}
 

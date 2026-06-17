@@ -12,11 +12,11 @@ import type { MapOccupant } from './MarketMap';
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const ATTRIB = 'Tiles © Esri, Maxar, Earthstar Geographics';
 
-// Stall footprint as real ground size — geographic rectangles, so they scale with
-// zoom (fill the view up close, shrink when zoomed out). Sized to roughly fill the
-// generated grid spacing (~7 m × 4 m) so the layout reads as a packed market.
-const H = 3 / 111320; // half stall height (~6 m)
-const W = 1.8 / 79300; // half stall width (~3.6 m)
+// Stall footprint as a real ground size — geographic circles, so they scale with
+// zoom (fill the view up close, shrink when zoomed out) and need no rotation to
+// align with the market's real orientation. Radius sized to sit inside the
+// generated grid spacing (~7 m × 4 m).
+const STALL_RADIUS_M = 2.5; // ground radius in metres
 
 function styleFor(occupied: boolean, highlighted: boolean, disabled: boolean, catColor: string | null, byCategory: boolean): L.PathOptions {
   if (highlighted) {
@@ -84,24 +84,21 @@ export function MarketGeoMap({
     for (const p of positions) {
       const occ = occMap[p.label];
       const disabled = !!p.disabled;
-      const rect = L.rectangle(
-        [
-          [p.lat - H, p.lng - W],
-          [p.lat + H, p.lng + W],
-        ],
-        styleFor(Boolean(occ), hiSet.has(p.label), disabled, categoryColor(p.category), byCategory),
-      );
-      rect.bindTooltip(
+      const circle = L.circle([p.lat, p.lng], {
+        radius: STALL_RADIUS_M,
+        ...styleFor(Boolean(occ), hiSet.has(p.label), disabled, categoryColor(p.category), byCategory),
+      });
+      circle.bindTooltip(
         `${p.label}${p.category ? ` · ${p.category}` : ''} — ${disabled ? 'out of service' : occ ? occ.name : 'available'}`,
         { direction: 'top' },
       );
-      rect.on('click', () => {
+      circle.on('click', () => {
         if (disabled) return; // disabled stalls aren't assignable
         const { onCellClick: cbk, occupied: o } = state.current;
         if (cbk) cbk(p.label);
         else if (o[p.label]?.slug) navigate(`/vendor/${o[p.label]!.slug}`);
       });
-      layer.addLayer(rect);
+      layer.addLayer(circle);
 
       // Always-visible stall number, centered on the stall (non-interactive).
       layer.addLayer(

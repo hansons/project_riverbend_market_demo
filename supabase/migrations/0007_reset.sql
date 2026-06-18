@@ -44,7 +44,7 @@ begin
     ('22220000-0000-4000-8000-000000000002', 'Midweek Market', 'Wednesday', 'June – September', '3pm – 7pm',
      'Maple Square, downtown', 'A smaller after-work market for fresh dinner picks.', 2),
     ('22220000-0000-4000-8000-000000000003', 'Winter Market', 'Saturday', 'December – March (2nd & 4th Sat)', '10am – 2pm',
-     'The Grange Hall, Orchard Avenue', 'Indoor cool-season produce, baked goods, and crafts.', 0);  -- sort 0 = flagship (demo currently switched to Winter; set back to 3 to revert)
+     'Guerber Hall, Benton County Fairgrounds — 110 SW 53rd St, Corvallis', 'Indoor cool-season produce, baked goods, and crafts.', 0);  -- sort 0 = flagship (demo currently switched to Winter; set back to 3 to revert)
 
   insert into vendors (id, slug, name, category, tagline, story, town, practices, market_days, image_url, email, status, featured) values
     ('a0000000-0000-4000-8000-000000000001', 'fern-hollow-farm', 'Fern Hollow Farm', 'Produce',

@@ -3,7 +3,15 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAsync } from '@/lib/useAsync';
 import { fetchMarkets } from '@/lib/data';
-import { fetchAllMarketCenters, saveMarketCenter, DEFAULT_CENTER } from '@/lib/stalls';
+import {
+  fetchAllMarketMaps,
+  saveMarketMap,
+  aspectClass,
+  MAP_ASPECTS,
+  DEFAULT_CENTER,
+  type MapAspect,
+  type MarketMapSettings,
+} from '@/lib/stalls';
 import { updateMarket, createMarket, deleteMarket } from '@/lib/platform';
 import type { Market } from '@/lib/types';
 
@@ -11,18 +19,37 @@ const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery
 const ATTRIB = 'Tiles © Esri, Maxar, Earthstar Geographics';
 const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-// A satellite map with a fixed centre crosshair; reports the map centre as the
-// chosen location whenever the owner stops panning.
-function LocationPicker({ value, onChange }: { value: [number, number]; onChange: (c: [number, number]) => void }) {
+// A satellite map with a draggable 📍 marker; reports the marker position as the
+// chosen location. Drag the pin or click the map to move it.
+function LocationPicker({
+  value,
+  aspect,
+  onChange,
+}: {
+  value: [number, number];
+  aspect: MapAspect;
+  onChange: (c: [number, number]) => void;
+}) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
     const map = L.map(elRef.current, { scrollWheelZoom: false }).setView(value, 18);
     L.tileLayer(ESRI, { maxZoom: 22, maxNativeZoom: 19, attribution: ATTRIB }).addTo(map);
-    map.on('moveend', () => {
-      const c = map.getCenter();
-      onChange([c.lat, c.lng]);
+    const icon = L.divIcon({
+      className: '',
+      html: '<div style="font-size:30px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))">📍</div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 28],
+    });
+    const marker = L.marker(value, { draggable: true, icon }).addTo(map);
+    marker.on('dragend', () => {
+      const ll = marker.getLatLng();
+      onChange([ll.lat, ll.lng]);
+    });
+    map.on('click', (e) => {
+      marker.setLatLng(e.latlng);
+      onChange([e.latlng.lat, e.latlng.lng]);
     });
     mapRef.current = map;
     return () => {
@@ -31,23 +58,20 @@ function LocationPicker({ value, onChange }: { value: [number, number]; onChange
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return (
-    <div className="relative">
-      <div ref={elRef} className="h-60 w-full overflow-hidden rounded-xl border border-brand-line" />
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <span className="-translate-y-3 text-3xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">📍</span>
-      </div>
-    </div>
-  );
+  // Re-fit Leaflet when the chosen shape resizes the container.
+  useEffect(() => {
+    mapRef.current?.invalidateSize();
+  }, [aspect]);
+  return <div ref={elRef} className={`${aspectClass(aspect)} overflow-hidden rounded-xl border border-brand-line`} />;
 }
 
 function MarketConfigCard({
   market,
-  initialCenter,
+  settings,
   onChanged,
 }: {
   market: Market;
-  initialCenter: [number, number];
+  settings: MarketMapSettings;
   onChanged: () => void;
 }) {
   const [name, setName] = useState(market.name);
@@ -56,7 +80,8 @@ function MarketConfigCard({
   const [season, setSeason] = useState(market.season);
   const [location, setLocation] = useState(market.location);
   const [blurb, setBlurb] = useState(market.blurb ?? '');
-  const [center, setCenter] = useState<[number, number]>(initialCenter);
+  const [center, setCenter] = useState<[number, number]>(settings.center ?? DEFAULT_CENTER);
+  const [aspect, setAspect] = useState<MapAspect>(settings.aspect);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<'ok' | string | null>(null);
 
@@ -71,7 +96,7 @@ function MarketConfigCard({
         season: season.trim(),
         location: location.trim(),
         blurb: blurb.trim() || null,
-      })) || (await saveMarketCenter(market.id, center[0], center[1]));
+      })) || (await saveMarketMap(market.id, center, aspect));
     setSaving(false);
     if (err) setMsg(err);
     else {
@@ -134,14 +159,32 @@ function MarketConfigCard({
           </label>
         </div>
         <div>
-          <span className="field-label">Default map location (satellite center)</span>
-          <p className="mb-1.5 mt-0.5 text-xs text-brand-muted">
-            Pan so the 📍 sits on your market. This locks where the stall map opens — the Market Admin
-            can’t move it.
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+            <span className="field-label">Default map location &amp; shape</span>
+            <div className="inline-flex overflow-hidden rounded-lg border border-brand-line text-[11px]">
+              {MAP_ASPECTS.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => setAspect(a)}
+                  className={
+                    aspect === a
+                      ? 'bg-brand-primary px-2.5 py-1 font-semibold capitalize text-white'
+                      : 'px-2.5 py-1 capitalize text-brand-ink/70 hover:bg-brand-paper'
+                  }
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="mb-1.5 text-xs text-brand-muted">
+            Drag the 📍 onto your market (or click the map), then <strong>Save market</strong>. This locks
+            where the stall map opens — the Market Admin can’t move it.
           </p>
-          <LocationPicker value={center} onChange={setCenter} />
+          <LocationPicker value={center} aspect={aspect} onChange={setCenter} />
           <p className="mt-1 text-[11px] text-brand-muted">
-            {center[0].toFixed(5)}, {center[1].toFixed(5)}
+            {center[0].toFixed(5)}, {center[1].toFixed(5)} · {aspect}
           </p>
         </div>
       </div>
@@ -161,7 +204,7 @@ function MarketConfigCard({
 
 export function OwnerMarkets() {
   const { data: markets, loading, reload } = useAsync(fetchMarkets, [], []);
-  const { data: centers, reload: reloadCenters } = useAsync(fetchAllMarketCenters, [], {});
+  const { data: maps, reload: reloadMaps } = useAsync(fetchAllMarketMaps, [], {});
   const [busy, setBusy] = useState(false);
 
   async function add() {
@@ -182,7 +225,7 @@ export function OwnerMarkets() {
 
   function refresh() {
     reload();
-    reloadCenters();
+    reloadMaps();
   }
 
   return (
@@ -199,7 +242,12 @@ export function OwnerMarkets() {
       ) : (
         <div className="space-y-5">
           {markets.map((m) => (
-            <MarketConfigCard key={m.id} market={m} initialCenter={centers[m.id] ?? DEFAULT_CENTER} onChanged={refresh} />
+            <MarketConfigCard
+              key={m.id}
+              market={m}
+              settings={maps[m.id] ?? { center: null, aspect: 'landscape' }}
+              onChanged={refresh}
+            />
           ))}
         </div>
       )}

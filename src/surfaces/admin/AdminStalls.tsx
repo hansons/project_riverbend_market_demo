@@ -18,7 +18,7 @@ import { MarketMap } from '@/components/MarketMap';
 import { MarketGeoMap } from '@/components/MarketGeoMap';
 import { StallLayoutEditor } from '@/components/StallLayoutEditor';
 import { StallGridEditor } from '@/components/StallGridEditor';
-import { fetchMarketStalls, fetchMarketCenter, DEFAULT_CENTER } from '@/lib/stalls';
+import { fetchMarketStalls, fetchMarketMap, DEFAULT_CENTER, DEFAULT_MAP_SETTINGS } from '@/lib/stalls';
 import { CsvToolbar } from '@/components/CsvToolbar';
 
 const TOTAL_STALLS = 48; // A–D × 12
@@ -64,12 +64,13 @@ export function AdminStalls() {
     [],
   );
   const disabledStalls = new Set(marketStalls.filter((s) => s.disabled).map((s) => s.label));
-  const { data: marketCenter } = useAsync(
-    () => (currentMarketId ? fetchMarketCenter(currentMarketId) : Promise.resolve(null)),
+  const { data: marketMap } = useAsync(
+    () => (currentMarketId ? fetchMarketMap(currentMarketId) : Promise.resolve(DEFAULT_MAP_SETTINGS)),
     [currentMarketId],
-    null,
+    DEFAULT_MAP_SETTINGS,
   );
-  const center = marketCenter ?? DEFAULT_CENTER;
+  const center = marketMap.center ?? DEFAULT_CENTER;
+  const aspect = marketMap.aspect;
 
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -442,6 +443,7 @@ export function AdminStalls() {
               stalls={marketStalls}
               center={center}
               colorBy={colorBy}
+              aspect={aspect}
             />
           )}
         </div>

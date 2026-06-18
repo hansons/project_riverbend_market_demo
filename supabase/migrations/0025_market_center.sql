@@ -11,8 +11,11 @@ create table if not exists market_settings (
   market_id  uuid primary key,            -- stable seeded market UUID; no FK (reset-safe)
   center_lat double precision,
   center_lng double precision,
+  aspect     text not null default 'landscape',   -- 'landscape' | 'portrait' | 'square' (satellite map shape)
   updated_at timestamptz not null default now()
 );
+-- For tables created by an earlier copy of this migration:
+alter table market_settings add column if not exists aspect text not null default 'landscape';
 
 alter table market_settings enable row level security;
 

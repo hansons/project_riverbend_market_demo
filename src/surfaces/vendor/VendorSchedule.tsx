@@ -4,7 +4,7 @@ import { useAsync } from '@/lib/useAsync';
 import { formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
 import { MarketGeoMap } from '@/components/MarketGeoMap';
-import { fetchMarketStalls } from '@/lib/stalls';
+import { fetchMarketStalls, fetchMarketMap, DEFAULT_MAP_SETTINGS } from '@/lib/stalls';
 import type { ScheduleStatus, Vendor } from '@/lib/types';
 
 function todayISO(): string {
@@ -42,6 +42,11 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
     () => (marketId ? fetchMarketStalls(marketId) : Promise.resolve([])),
     [marketId],
     [],
+  );
+  const { data: marketMap } = useAsync(
+    () => (marketId ? fetchMarketMap(marketId) : Promise.resolve(DEFAULT_MAP_SETTINGS)),
+    [marketId],
+    DEFAULT_MAP_SETTINGS,
   );
 
   async function set(dateId: string, status: ScheduleStatus) {
@@ -99,7 +104,7 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
             stallsLoading ? (
               <div className="h-[440px] animate-pulse rounded-2xl bg-brand-paper" />
             ) : (
-              <MarketGeoMap stalls={marketStalls} highlight={myNext.s.stalls} />
+              <MarketGeoMap stalls={marketStalls} highlight={myNext.s.stalls} aspect={marketMap.aspect} />
             )
           ) : (
             <MarketMap

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { navigate } from '@/lib/router';
-import { categoryColor, DEFAULT_CENTER, generateStallGrid, type StallPos } from '@/lib/stalls';
+import { aspectClass, categoryColor, DEFAULT_CENTER, generateStallGrid, type MapAspect, type StallPos } from '@/lib/stalls';
 import type { MapOccupant } from './MarketMap';
 
 // Satellite stall map over free Esri World Imagery tiles. Renders saved stall
@@ -41,6 +41,7 @@ export function MarketGeoMap({
   stalls,
   center = DEFAULT_CENTER,
   colorBy = 'status',
+  aspect = 'landscape',
 }: {
   occupied?: Record<string, MapOccupant>;
   highlight?: string | string[] | null;
@@ -48,6 +49,7 @@ export function MarketGeoMap({
   stalls?: StallPos[];
   center?: [number, number];
   colorBy?: 'status' | 'category';
+  aspect?: MapAspect;
 }) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -122,7 +124,7 @@ export function MarketGeoMap({
 
   return (
     <div>
-      <div ref={elRef} className="h-[440px] w-full overflow-hidden rounded-2xl border border-brand-line" />
+      <div ref={elRef} className={`${aspectClass(aspect)} overflow-hidden rounded-2xl border border-brand-line`} />
       <div className="mt-2 flex flex-wrap gap-3 px-1 text-[11px] text-brand-muted">
         {byCategory ? (
           <>

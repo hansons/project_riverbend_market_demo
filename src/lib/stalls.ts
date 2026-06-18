@@ -63,31 +63,60 @@ export function centroid(stalls: StallPos[]): [number, number] | null {
   return [lat, lng];
 }
 
-/** A market's saved default map center (null if never set — callers fall back to DEFAULT_CENTER). */
-export async function fetchMarketCenter(marketId: string): Promise<[number, number] | null> {
-  const { data } = await supabase
-    .from('market_settings')
-    .select('center_lat, center_lng')
-    .eq('market_id', marketId)
-    .maybeSingle();
-  const r = data as { center_lat: number | null; center_lng: number | null } | null;
-  return r && r.center_lat != null && r.center_lng != null ? [r.center_lat, r.center_lng] : null;
+// ── Owner-set per-market map settings: default satellite center + shape ──
+export type MapAspect = 'landscape' | 'portrait' | 'square';
+export const MAP_ASPECTS: MapAspect[] = ['landscape', 'portrait', 'square'];
+
+export interface MarketMapSettings {
+  center: [number, number] | null;
+  aspect: MapAspect;
 }
 
-/** Saved default centers for every market that has one, keyed by market id. */
-export async function fetchAllMarketCenters(): Promise<Record<string, [number, number]>> {
-  const { data } = await supabase.from('market_settings').select('market_id, center_lat, center_lng');
-  const rows = (data as { market_id: string; center_lat: number | null; center_lng: number | null }[]) ?? [];
-  const out: Record<string, [number, number]> = {};
-  for (const r of rows) if (r.center_lat != null && r.center_lng != null) out[r.market_id] = [r.center_lat, r.center_lng];
+export const DEFAULT_MAP_SETTINGS: MarketMapSettings = { center: null, aspect: 'landscape' };
+
+const toAspect = (v: string | null | undefined): MapAspect => (v === 'portrait' || v === 'square' ? v : 'landscape');
+
+/** Tailwind container classes that frame a satellite map to the given shape. */
+export function aspectClass(aspect: MapAspect): string {
+  if (aspect === 'portrait') return 'mx-auto h-[560px] w-full max-w-[440px]';
+  if (aspect === 'square') return 'mx-auto h-[440px] w-full max-w-[440px]';
+  return 'h-[420px] w-full';
+}
+
+/** A market's owner-set map settings (center may be null → callers fall back to DEFAULT_CENTER). */
+export async function fetchMarketMap(marketId: string): Promise<MarketMapSettings> {
+  const { data } = await supabase
+    .from('market_settings')
+    .select('center_lat, center_lng, aspect')
+    .eq('market_id', marketId)
+    .maybeSingle();
+  const r = data as { center_lat: number | null; center_lng: number | null; aspect: string | null } | null;
+  return {
+    center: r && r.center_lat != null && r.center_lng != null ? [r.center_lat, r.center_lng] : null,
+    aspect: toAspect(r?.aspect),
+  };
+}
+
+/** Map settings for every market that has them, keyed by market id. */
+export async function fetchAllMarketMaps(): Promise<Record<string, MarketMapSettings>> {
+  const { data } = await supabase.from('market_settings').select('market_id, center_lat, center_lng, aspect');
+  const rows = (data as { market_id: string; center_lat: number | null; center_lng: number | null; aspect: string | null }[]) ?? [];
+  const out: Record<string, MarketMapSettings> = {};
+  for (const r of rows) {
+    out[r.market_id] = {
+      center: r.center_lat != null && r.center_lng != null ? [r.center_lat, r.center_lng] : null,
+      aspect: toAspect(r.aspect),
+    };
+  }
   return out;
 }
 
-/** Set a market's default map center (owner only — RLS enforces). */
-export async function saveMarketCenter(marketId: string, lat: number, lng: number): Promise<string | null> {
-  const { error } = await supabase
-    .from('market_settings')
-    .upsert({ market_id: marketId, center_lat: lat, center_lng: lng, updated_at: new Date().toISOString() }, { onConflict: 'market_id' });
+/** Set a market's default map center + shape (owner only — RLS enforces). */
+export async function saveMarketMap(marketId: string, center: [number, number], aspect: MapAspect): Promise<string | null> {
+  const { error } = await supabase.from('market_settings').upsert(
+    { market_id: marketId, center_lat: center[0], center_lng: center[1], aspect, updated_at: new Date().toISOString() },
+    { onConflict: 'market_id' },
+  );
   return error?.message ?? null;
 }
 

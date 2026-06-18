@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAsync } from '@/lib/useAsync';
 import { fetchVendors, fetchAssignmentsForDate, fetchFrontPageMarketDate } from '@/lib/data';
-import { fetchMarketStalls, type StallPos } from '@/lib/stalls';
+import { fetchMarketStalls, fetchMarketMap, DEFAULT_MAP_SETTINGS, type StallPos } from '@/lib/stalls';
 import { formatDate } from '@/lib/format';
 import { navigate } from '@/lib/router';
 import { MarketMap } from '@/components/MarketMap';
@@ -28,16 +28,23 @@ export function VisitPanel() {
       // Key off the flagship market's next date so stalls + assignments match the
       // front-page "this Saturday" framing (and the SeasonStrip attending filter).
       const fp = await fetchFrontPageMarketDate(todayISO());
-      const [vendors, stalls, assignsRaw] = await Promise.all([
+      const [vendors, stalls, assignsRaw, mapSettings] = await Promise.all([
         fetchVendors(),
         fp ? fetchMarketStalls(fp.marketId) : Promise.resolve([] as StallPos[]),
         fp ? fetchAssignmentsForDate(fp.dateId) : Promise.resolve([]),
+        fp ? fetchMarketMap(fp.marketId) : Promise.resolve(DEFAULT_MAP_SETTINGS),
       ]);
       const assigns: Assign[] = assignsRaw.map((a) => ({ stall: a.stall, slug: a.slug }));
-      return { vendors, stalls, assigns, dateISO: fp?.dateISO ?? null };
+      return { vendors, stalls, assigns, dateISO: fp?.dateISO ?? null, aspect: mapSettings.aspect };
     },
     [],
-    { vendors: [] as Vendor[], stalls: [] as StallPos[], assigns: [] as Assign[], dateISO: null as string | null },
+    {
+      vendors: [] as Vendor[],
+      stalls: [] as StallPos[],
+      assigns: [] as Assign[],
+      dateISO: null as string | null,
+      aspect: DEFAULT_MAP_SETTINGS.aspect,
+    },
   );
   const [view, setView] = useState<'grid' | 'satellite'>('satellite');
 
@@ -91,7 +98,7 @@ export function VisitPanel() {
       {loading ? (
         <div className="h-64 animate-pulse rounded-2xl bg-brand-paper" />
       ) : view === 'satellite' ? (
-        <MarketGeoMap stalls={data.stalls} highlight={highlight} />
+        <MarketGeoMap stalls={data.stalls} highlight={highlight} aspect={data.aspect} />
       ) : (
         <MarketMap
           stalls={gridStalls}

@@ -10,6 +10,7 @@ import {
   addVendorToDay,
   addVendorToDayWithStall,
   addMarketDate,
+  addMarketDates,
   removeFromDay,
   copyAssignments,
 } from '@/lib/adminData';
@@ -44,6 +45,32 @@ interface ImportRow {
 function todayISO(): string {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function addDays(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+function weekdayOf(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return WEEKDAYS[new Date(y, m - 1, d).getDay()];
+}
+
+/** Dates from `start` to `until` (inclusive) every `intervalDays`, capped to avoid runaway. */
+function buildSeries(start: string, until: string, intervalDays: number, cap = 104): string[] {
+  const out: string[] = [];
+  if (!start || !until || start > until) return out;
+  let cur = start;
+  while (cur <= until && out.length < cap) {
+    out.push(cur);
+    cur = addDays(cur, intervalDays);
+  }
+  return out;
 }
 
 export function AdminStalls() {
@@ -88,11 +115,22 @@ export function AdminStalls() {
   const [hint, setHint] = useState<string | null>(null);
   const [addingDay, setAddingDay] = useState(false);
   const [newDay, setNewDay] = useState('');
+  const [dayMode, setDayMode] = useState<'single' | 'recurring'>('single');
+  const [seriesStart, setSeriesStart] = useState('');
+  const [seriesUntil, setSeriesUntil] = useState('');
+  const [seriesInterval, setSeriesInterval] = useState(7);
   const [mapView, setMapView] = useState<'grid' | 'satellite'>('grid');
   const [editingLayout, setEditingLayout] = useState(false);
   const [editingGridStalls, setEditingGridStalls] = useState(false);
   const [colorBy, setColorBy] = useState<'status' | 'category'>('status');
   const [importPreview, setImportPreview] = useState<{ rows: ImportRow[]; skipped: number; dates: Set<string> } | null>(null);
+
+  // Recurring-series preview for the "Add market day" panel (deduped against existing days).
+  const series = dayMode === 'recurring' ? buildSeries(seriesStart, seriesUntil, seriesInterval) : [];
+  const existingDates = new Set(marketDates.map((d) => d.date));
+  const newSeries = series.filter((d) => !existingDates.has(d));
+  const dupCount = series.length - newSeries.length;
+  const seriesCapped = series.length >= 104;
 
   const confirmed = rows.filter((r) => r.status === 'confirmed');
   const scheduledIds = new Set(confirmed.map((r) => r.vendor_id));
@@ -232,6 +270,31 @@ export function AdminStalls() {
     setAddingDay(false);
     reloadDates();
     if (id) setPicked(id);
+  }
+
+  function closeAdd() {
+    setAddingDay(false);
+    setNewDay('');
+    setSeriesStart('');
+    setSeriesUntil('');
+  }
+
+  async function addSeries() {
+    if (!currentMarketId || !newSeries.length) return;
+    setBusy(true);
+    setHint(null);
+    const { rows: added, error } = await addMarketDates(currentMarketId, newSeries);
+    setBusy(false);
+    if (error) {
+      setHint(error);
+      return;
+    }
+    closeAdd();
+    reloadDates();
+    const upcoming = added
+      .filter((r) => r.date >= todayISO())
+      .sort((a, b) => a.date.localeCompare(b.date))[0];
+    if (upcoming) setPicked(upcoming.id);
   }
 
   async function clickCell(label: string) {
@@ -392,32 +455,109 @@ export function AdminStalls() {
       </div>
 
       {addingDay && currentMarketId && (
-        <div className="card flex flex-wrap items-end gap-3 p-4">
-          <div>
-            <span className="field-label">New market day</span>
-            <input
-              type="date"
-              className="field-input mt-1"
-              value={newDay}
-              min={today}
-              onChange={(e) => setNewDay(e.target.value)}
-            />
+        <div className="card p-4">
+          <div className="inline-flex rounded-lg border border-brand-line p-0.5 text-sm">
+            {(
+              [
+                ['single', 'Single day'],
+                ['recurring', 'Recurring series'],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setDayMode(k)}
+                className={
+                  dayMode === k
+                    ? 'rounded-md bg-brand-primary px-3 py-1 font-medium text-white'
+                    : 'rounded-md px-3 py-1 text-brand-ink/70 hover:bg-brand-paper'
+                }
+              >
+                {label}
+              </button>
+            ))}
           </div>
-          <button className="btn-primary" onClick={addDay} disabled={busy || !newDay}>
-            {busy ? 'Adding…' : 'Add day'}
-          </button>
-          <button
-            className="btn-ghost"
-            onClick={() => {
-              setAddingDay(false);
-              setNewDay('');
-            }}
-            disabled={busy}
-          >
-            Cancel
-          </button>
-          <p className="text-xs text-brand-muted">
-            Adds a market day to {demoMarket?.name ?? 'this market'}’s calendar.
+
+          {dayMode === 'single' ? (
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <div>
+                <span className="field-label">New market day</span>
+                <input
+                  type="date"
+                  className="field-input mt-1"
+                  value={newDay}
+                  min={today}
+                  onChange={(e) => setNewDay(e.target.value)}
+                />
+              </div>
+              <button className="btn-primary" onClick={addDay} disabled={busy || !newDay}>
+                {busy ? 'Adding…' : 'Add day'}
+              </button>
+              <button className="btn-ghost" onClick={closeAdd} disabled={busy}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <span className="field-label">Starts</span>
+                  <input
+                    type="date"
+                    className="field-input mt-1"
+                    value={seriesStart}
+                    min={today}
+                    onChange={(e) => setSeriesStart(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <span className="field-label">Repeats</span>
+                  <select
+                    className="field-input mt-1"
+                    value={seriesInterval}
+                    onChange={(e) => setSeriesInterval(Number(e.target.value))}
+                  >
+                    <option value={7}>Weekly</option>
+                    <option value={14}>Every 2 weeks</option>
+                    <option value={28}>Every 4 weeks</option>
+                  </select>
+                </div>
+                <div>
+                  <span className="field-label">Until</span>
+                  <input
+                    type="date"
+                    className="field-input mt-1"
+                    value={seriesUntil}
+                    min={seriesStart || today}
+                    onChange={(e) => setSeriesUntil(e.target.value)}
+                  />
+                </div>
+                <button className="btn-primary" onClick={addSeries} disabled={busy || !newSeries.length}>
+                  {busy ? 'Adding…' : `Add ${newSeries.length} day${newSeries.length === 1 ? '' : 's'}`}
+                </button>
+                <button className="btn-ghost" onClick={closeAdd} disabled={busy}>
+                  Cancel
+                </button>
+              </div>
+              {seriesStart && seriesUntil && (
+                <p className="mt-2 text-xs text-brand-muted">
+                  {series.length === 0 ? (
+                    'Pick a start on or before the “until” date.'
+                  ) : (
+                    <>
+                      Creates {newSeries.length} {weekdayOf(seriesStart)} market day
+                      {newSeries.length === 1 ? '' : 's'}
+                      {newSeries.length > 0 &&
+                        ` · ${formatDate(newSeries[0])} → ${formatDate(newSeries[newSeries.length - 1])}`}
+                      {dupCount > 0 && ` · ${dupCount} already on the calendar`}
+                      {seriesCapped && ' · capped at 104'}
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+          <p className="mt-2 text-xs text-brand-muted">
+            Adds to {demoMarket?.name ?? 'this market'}’s calendar.
           </p>
         </div>
       )}

@@ -144,6 +144,19 @@ export async function addMarketDate(
   return { id: (data as { id: string } | null)?.id ?? null, error: error?.message ?? null };
 }
 
+/** Bulk-add a recurring series of days to a market's calendar. Returns inserted rows. */
+export async function addMarketDates(
+  marketId: string,
+  dates: string[],
+): Promise<{ rows: { id: string; date: string }[]; error: string | null }> {
+  if (!dates.length) return { rows: [], error: null };
+  const { data, error } = await supabase
+    .from('market_dates')
+    .insert(dates.map((date) => ({ market_id: marketId, date })))
+    .select('id, date');
+  return { rows: (data as { id: string; date: string }[]) ?? [], error: error?.message ?? null };
+}
+
 // ── Season import/export ──
 export interface ScheduleExportRow {
   date: string;

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fetchMarketDates, fetchMySchedule, setScheduleStatus } from '@/lib/vendorData';
+import { fetchMarketDates, fetchMySchedule, setScheduleStatus, setScheduleStatusBulk } from '@/lib/vendorData';
 import { useAsync } from '@/lib/useAsync';
 import { formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
@@ -33,6 +33,7 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
   const today = todayISO();
   const upcomingDates = dates.filter((d) => d.date >= today && inDemo(d.market_id));
   const byDate = new Map(sched.map((s) => [s.market_date_id, s]));
+  const unconfirmed = upcomingDates.filter((d) => (byDate.get(d.id)?.status ?? 'none') !== 'confirmed');
   const myStops = sched
     .filter((s) => s.status === 'confirmed' && s.stalls.some((st) => /^[A-D]\d+$/.test(st)))
     .map((s) => ({ s, d: dates.find((x) => x.id === s.market_date_id) }))
@@ -61,14 +62,32 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
     reload();
   }
 
+  async function confirmAll() {
+    const ids = unconfirmed.map((d) => d.id);
+    if (!ids.length) return;
+    setBusy('all');
+    await setScheduleStatusBulk(vendor.id, ids, 'confirmed');
+    setBusy(null);
+    reload();
+  }
+
   const loading = datesLoading || schedLoading;
 
   return (
     <div className="card p-6">
-      <h2 className="text-xl">Market schedule</h2>
-      <p className="mt-1 text-sm text-brand-muted">
-        Confirm or decline each upcoming date. Your stall assignment is set by market staff.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl">Market schedule</h2>
+          <p className="mt-1 text-sm text-brand-muted">
+            Confirm or decline each upcoming date. Your stall assignment is set by market staff.
+          </p>
+        </div>
+        {!loading && unconfirmed.length > 0 && (
+          <button onClick={confirmAll} disabled={!!busy} className="btn-primary shrink-0 text-sm">
+            {busy === 'all' ? 'Confirming…' : `✓ Confirm all (${unconfirmed.length})`}
+          </button>
+        )}
+      </div>
 
       {myNext && (
         <div className="mt-4">

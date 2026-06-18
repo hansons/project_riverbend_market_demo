@@ -190,6 +190,22 @@ export async function setScheduleStatus(
   return error?.message ?? null;
 }
 
+/** Set the vendor's status on many market dates at once (e.g. "Confirm all"). */
+export async function setScheduleStatusBulk(
+  vendorId: string,
+  marketDateIds: string[],
+  status: ScheduleStatus,
+): Promise<string | null> {
+  if (!marketDateIds.length) return null;
+  const { error } = await supabase
+    .from('vendor_schedule')
+    .upsert(
+      marketDateIds.map((market_date_id) => ({ vendor_id: vendorId, market_date_id, status })),
+      { onConflict: 'vendor_id,market_date_id' },
+    );
+  return error?.message ?? null;
+}
+
 // ── Fees ──
 export async function fetchFees(vendorId: string): Promise<Fee[]> {
   const { data } = await supabase

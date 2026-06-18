@@ -76,6 +76,7 @@ export function MarketMap({
   occupied = {},
   highlight,
   highlightText,
+  suggest,
   onCellClick,
   stalls,
   colorBy = 'status',
@@ -84,6 +85,7 @@ export function MarketMap({
   occupied?: Record<string, MapOccupant>;
   highlight?: string | string[] | null;
   highlightText?: string;
+  suggest?: string[] | null;
   onCellClick?: (label: string) => void;
   stalls?: GridStall[];
   colorBy?: 'status' | 'category';
@@ -93,6 +95,7 @@ export function MarketMap({
   const { placed, vbW, vbH } = layout(set);
   const hiSet = new Set(Array.isArray(highlight) ? highlight : highlight ? [highlight] : []);
   const hiStall = placed.find((s) => hiSet.has(s.label));
+  const suggestSet = new Set(suggest ?? []);
   const byCategory = colorBy === 'category';
   const cats = byCategory ? [...new Set(placed.map((p) => (p.category ?? '').trim()).filter(Boolean))].sort() : [];
   const hasUncategorized = byCategory && placed.some((p) => !p.category || !p.category.trim());
@@ -107,6 +110,7 @@ export function MarketMap({
         {placed.map((s) => {
           const occ = occupied[s.label];
           const isHi = hiSet.has(s.label);
+          const isSuggested = suggestSet.has(s.label) && !isHi && !occ && !s.disabled;
           const catColor = categoryColor(s.category);
           let fill: string;
           let stroke: string;
@@ -122,6 +126,13 @@ export function MarketMap({
             fill = 'rgb(var(--brand-accent) / 0.85)';
             stroke = 'rgb(var(--brand-accent))';
             textFill = 'rgb(var(--brand-ink))';
+          } else if (isSuggested) {
+            // Open stall whose category matches the selected vendor — flag as a
+            // placement target while keeping its category tint.
+            fill = catColor ?? 'rgb(var(--brand-accent) / 0.2)';
+            stroke = 'rgb(var(--brand-accent))';
+            textFill = 'rgb(var(--brand-ink))';
+            fillOpacity = catColor ? 0.5 : undefined;
           } else if (byCategory && catColor) {
             fill = catColor;
             stroke = catColor;
@@ -159,7 +170,7 @@ export function MarketMap({
                 width={CW}
                 height={CH}
                 rx={6}
-                style={{ fill, fillOpacity, stroke, strokeWidth: isHi && !s.disabled ? 2 : 1, strokeDasharray: dash }}
+                style={{ fill, fillOpacity, stroke, strokeWidth: (isHi || isSuggested) && !s.disabled ? 2 : 1, strokeDasharray: dash }}
               />
               <text
                 x={s.x + CW / 2}
@@ -198,6 +209,9 @@ export function MarketMap({
             <LegendSwatch fill="rgb(var(--brand-accent) / 0.85)" border="rgb(var(--brand-accent))" label="Highlighted" />
             <LegendSwatch fill="rgb(var(--brand-muted) / 0.15)" border="rgb(var(--brand-muted) / 0.6)" dashed label="Disabled" />
           </>
+        )}
+        {suggestSet.size > 0 && (
+          <LegendSwatch fill="rgb(var(--brand-accent) / 0.5)" border="rgb(var(--brand-accent))" label="Suggested for vendor" />
         )}
       </div>
     </div>

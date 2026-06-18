@@ -122,7 +122,7 @@ export function AdminStalls() {
   const [mapView, setMapView] = useState<'grid' | 'satellite'>('grid');
   const [editingLayout, setEditingLayout] = useState(false);
   const [editingGridStalls, setEditingGridStalls] = useState(false);
-  const [colorBy, setColorBy] = useState<'status' | 'category'>('status');
+  const [colorBy, setColorBy] = useState<'status' | 'category'>('category');
   const [importPreview, setImportPreview] = useState<{ rows: ImportRow[]; skipped: number; dates: Set<string> } | null>(null);
 
   // Recurring-series preview for the "Add market day" panel (deduped against existing days).
@@ -147,6 +147,12 @@ export function AdminStalls() {
     .filter((s) => !occupied[s.label] && !disabledStalls.has(s.label))
     .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
   const normCat = (c: string | null | undefined) => (c ?? '').trim().toLowerCase();
+  // When a vendor is selected, suggest open stalls whose category matches theirs,
+  // so the operator can see at a glance where to place them.
+  const selectedVendorCategory = selectedRow?.vendors?.category ?? null;
+  const suggestedStalls = selectedVendorCategory
+    ? openStalls.filter((s) => normCat(s.category) === normCat(selectedVendorCategory)).map((s) => s.label)
+    : [];
   const selStall = selectedStall ? marketStalls.find((s) => s.label === selectedStall) ?? null : null;
   const selStallCategory = selStall?.category ?? null;
   const catMatches = (c: string | null | undefined) => !selStallCategory || normCat(c) === normCat(selStallCategory);
@@ -641,9 +647,9 @@ export function AdminStalls() {
                   setMapView(m);
                   setEditingLayout(false);
                   setEditingGridStalls(false);
-                  // Satellite is the shopper/zone view → default it to category colors;
-                  // Grid is the admin assignment view → default to status. Toggle still overrides.
-                  setColorBy(m === 'satellite' ? 'category' : 'status');
+                  // Both views default to category colors so the per-stall coloring set in
+                  // "Edit stalls" is presented; the Color toggle still overrides.
+                  setColorBy('category');
                 }}
                 className={[
                   'rounded-full border px-3 py-1 text-sm font-medium transition',
@@ -689,6 +695,12 @@ export function AdminStalls() {
               </span>
             )}
           </div>
+          {mapView === 'grid' && selectedRow && suggestedStalls.length > 0 && (
+            <p className="mb-2 text-xs font-medium text-brand-ink">
+              {suggestedStalls.length} open {selectedVendorCategory} stall{suggestedStalls.length === 1 ? '' : 's'}{' '}
+              highlighted for {selectedRow.vendors?.name} — click one to place.
+            </p>
+          )}
           {mapView === 'grid' ? (
             editingGridStalls && currentMarketId ? (
               <StallGridEditor
@@ -702,7 +714,14 @@ export function AdminStalls() {
                 onCancel={() => setEditingGridStalls(false)}
               />
             ) : (
-              <MarketMap occupied={occupied} highlight={selectedRow?.stalls ?? null} onCellClick={clickCell} stalls={marketStalls} colorBy={colorBy} />
+              <MarketMap
+                occupied={occupied}
+                highlight={selectedRow?.stalls ?? null}
+                suggest={suggestedStalls}
+                onCellClick={clickCell}
+                stalls={marketStalls}
+                colorBy={colorBy}
+              />
             )
           ) : editingLayout && currentMarketId ? (
             <StallLayoutEditor

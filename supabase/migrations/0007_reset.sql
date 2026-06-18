@@ -43,7 +43,7 @@ begin
      'Willow Bend Park, riverside lawn', 'Our flagship market — 60+ vendors, live music, and the full harvest.', 1),
     ('22220000-0000-4000-8000-000000000002', 'Midweek Market', 'Wednesday', 'June – September', '3pm – 7pm',
      'Maple Square, downtown', 'A smaller after-work market for fresh dinner picks.', 2),
-    ('22220000-0000-4000-8000-000000000003', 'Winter Market', 'Saturday', 'December – March (2nd & 4th Sat)', '10am – 2pm',
+    ('22220000-0000-4000-8000-000000000003', 'Corvallis Indoor Winter Market', 'Saturday', 'January – April', '9am – 1pm',
      'Guerber Hall, Benton County Fairgrounds — 110 SW 53rd St, Corvallis', 'Indoor cool-season produce, baked goods, and crafts.', 0);  -- sort 0 = flagship (demo currently switched to Winter; set back to 3 to revert)
 
   insert into vendors (id, slug, name, category, tagline, story, town, practices, market_days, image_url, email, status, featured) values
@@ -444,11 +444,22 @@ begin
     -- Last week (past): copy sources so "Copy last market" is live on the current week.
     ('33330000-0000-4000-8000-000000000010', '22220000-0000-4000-8000-000000000001', '2026-06-06', null, 0),
     ('33330000-0000-4000-8000-000000000011', '22220000-0000-4000-8000-000000000002', '2026-06-03', null, 0),
-    -- Winter market (…0003): upcoming Dec–Jan dates (2nd & 4th Sat) so the demo can run on Winter.
-    ('33330000-0000-4000-8000-000000000012', '22220000-0000-4000-8000-000000000003', '2026-12-12', null, 1),
-    ('33330000-0000-4000-8000-000000000013', '22220000-0000-4000-8000-000000000003', '2026-12-26', null, 2),
-    ('33330000-0000-4000-8000-000000000014', '22220000-0000-4000-8000-000000000003', '2027-01-09', null, 3),
-    ('33330000-0000-4000-8000-000000000015', '22220000-0000-4000-8000-000000000003', '2027-01-23', null, 4);
+    -- Corvallis Indoor Winter Market (…0003): every Saturday Jan 9 – Apr 10, 2027 (9am–1pm
+    -- season), so the admin has the full season to schedule vendors against.
+    ('33330000-0000-4000-8000-000000000012', '22220000-0000-4000-8000-000000000003', '2027-01-09', null, 1),
+    ('33330000-0000-4000-8000-000000000013', '22220000-0000-4000-8000-000000000003', '2027-01-16', null, 2),
+    ('33330000-0000-4000-8000-000000000014', '22220000-0000-4000-8000-000000000003', '2027-01-23', null, 3),
+    ('33330000-0000-4000-8000-000000000015', '22220000-0000-4000-8000-000000000003', '2027-01-30', null, 4),
+    ('33330000-0000-4000-8000-000000000016', '22220000-0000-4000-8000-000000000003', '2027-02-06', null, 5),
+    ('33330000-0000-4000-8000-000000000017', '22220000-0000-4000-8000-000000000003', '2027-02-13', null, 6),
+    ('33330000-0000-4000-8000-000000000018', '22220000-0000-4000-8000-000000000003', '2027-02-20', null, 7),
+    ('33330000-0000-4000-8000-000000000019', '22220000-0000-4000-8000-000000000003', '2027-02-27', null, 8),
+    ('33330000-0000-4000-8000-000000000020', '22220000-0000-4000-8000-000000000003', '2027-03-06', null, 9),
+    ('33330000-0000-4000-8000-000000000021', '22220000-0000-4000-8000-000000000003', '2027-03-13', null, 10),
+    ('33330000-0000-4000-8000-000000000022', '22220000-0000-4000-8000-000000000003', '2027-03-20', null, 11),
+    ('33330000-0000-4000-8000-000000000023', '22220000-0000-4000-8000-000000000003', '2027-03-27', null, 12),
+    ('33330000-0000-4000-8000-000000000024', '22220000-0000-4000-8000-000000000003', '2027-04-03', null, 13),
+    ('33330000-0000-4000-8000-000000000025', '22220000-0000-4000-8000-000000000003', '2027-04-10', null, 14);
 
   insert into vendor_schedule (vendor_id, market_date_id, status, stalls, note) values
     ('a0000000-0000-4000-8000-000000000001', '33330000-0000-4000-8000-000000000001', 'confirmed', '{B11,B12}', null),
@@ -675,8 +686,8 @@ begin
     ('a0000000-0000-4000-8000-000000000038', 'June 2026', 'Booth fee', 4000, 'paid', '2026-06-10'),
     ('a0000000-0000-4000-8000-000000000041', 'June 2026', 'Booth fee', 6000, 'due',  '2026-06-30');
 
-  -- Winter market lineup — cool-season vendors confirmed for the next Winter date
-  -- (Dec 12), with a lighter Dec 26 lineup as a "copy last week" source.
+  -- Winter market lineup — cool-season vendors confirmed for the opening Winter date
+  -- (Jan 9, 2027 = …0012), with a lighter next-week lineup (Jan 16 = …0013) as a "copy last week" source.
   insert into vendor_schedule (vendor_id, market_date_id, status, stalls, note) values
     ('a0000000-0000-4000-8000-000000000009', '33330000-0000-4000-8000-000000000012', 'confirmed', '{A1}', null),
     ('a0000000-0000-4000-8000-000000000002', '33330000-0000-4000-8000-000000000012', 'confirmed', '{A2}', null),

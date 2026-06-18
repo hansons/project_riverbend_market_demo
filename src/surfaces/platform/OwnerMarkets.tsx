@@ -92,6 +92,7 @@ function MarketConfigCard({
   const [aspect, setAspect] = useState<MapAspect>(settings.aspect);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<'ok' | string | null>(null);
+  const [open, setOpen] = useState(false);
 
   async function save() {
     setSaving(true);
@@ -126,7 +127,23 @@ function MarketConfigCard({
 
   return (
     <div className="card p-5">
-      <div className="grid gap-4 lg:grid-cols-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <div className="min-w-0">
+          <p className="font-serif text-lg font-semibold text-brand-primary-dark">{name || 'Untitled market'}</p>
+          <p className="truncate text-xs text-brand-muted">
+            {day}
+            {location ? ` · ${location}` : ''}
+          </p>
+        </div>
+        <span className="shrink-0 text-sm font-medium text-brand-muted">{open ? '▲ Collapse' : '▼ Edit'}</span>
+      </button>
+      {open && (
+        <div className="mt-4">
+          <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-3">
           <label className="block">
             <span className="field-label">Market name</span>
@@ -216,7 +233,9 @@ function MarketConfigCard({
         </button>
         {msg === 'ok' && <span className="text-sm text-status-ok">✓ Saved</span>}
         {msg && msg !== 'ok' && <span className="text-sm text-status-alert">{msg}</span>}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

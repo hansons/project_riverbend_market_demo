@@ -33,8 +33,9 @@ function LocationPicker({
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   useEffect(() => {
-    if (!elRef.current || mapRef.current) return;
-    const map = L.map(elRef.current, { scrollWheelZoom: false }).setView(value, 18);
+    const el = elRef.current;
+    if (!el || mapRef.current) return;
+    const map = L.map(el, { scrollWheelZoom: false }).setView(value, 18);
     L.tileLayer(ESRI, { maxZoom: 22, maxNativeZoom: 19, attribution: ATTRIB }).addTo(map);
     const icon = L.divIcon({
       className: '',
@@ -52,16 +53,17 @@ function LocationPicker({
       onChange([e.latlng.lat, e.latlng.lng]);
     });
     mapRef.current = map;
+    // Re-fit Leaflet whenever the chosen shape resizes the container (fires after
+    // layout, so the satellite tiles reload for the new size instead of vanishing).
+    const ro = new ResizeObserver(() => map.invalidateSize());
+    ro.observe(el);
     return () => {
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // Re-fit Leaflet when the chosen shape resizes the container.
-  useEffect(() => {
-    mapRef.current?.invalidateSize();
-  }, [aspect]);
   return <div ref={elRef} className={`${aspectClass(aspect)} overflow-hidden rounded-xl border border-brand-line`} />;
 }
 

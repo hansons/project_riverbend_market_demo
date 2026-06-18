@@ -60,9 +60,10 @@ export function MarketGeoMap({
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
     const positions = state.current.stalls?.length ? state.current.stalls : generateStallGrid(state.current.center);
-    const map = L.map(elRef.current, { scrollWheelZoom: false, maxZoom: 22 });
+    const map = L.map(elRef.current, { scrollWheelZoom: false, maxZoom: 22, zoomSnap: 0.5, zoomDelta: 0.5 });
     // Imagery is native to ~z19; allow zooming to 22 (Leaflet upscales the tiles)
-    // so the stalls can grow to fill the view when you zoom right in.
+    // so the stalls can grow to fill the view when you zoom right in. Half-step
+    // zoom (zoomSnap/zoomDelta) lets you stop before the imagery turns blurry.
     L.tileLayer(ESRI, { maxZoom: 22, maxNativeZoom: 19, attribution: ATTRIB }).addTo(map);
     map.fitBounds(L.latLngBounds(positions.map((p) => [p.lat, p.lng] as [number, number])), { padding: [40, 40], maxZoom: 20 });
     layerRef.current = L.layerGroup().addTo(map);

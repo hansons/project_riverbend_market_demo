@@ -35,7 +35,7 @@ function LocationPicker({
   useEffect(() => {
     const el = elRef.current;
     if (!el || mapRef.current) return;
-    const map = L.map(el, { scrollWheelZoom: false }).setView(value, 18);
+    const map = L.map(el, { scrollWheelZoom: false, zoomSnap: 0.5, zoomDelta: 0.5 }).setView(value, 18);
     L.tileLayer(ESRI, { maxZoom: 22, maxNativeZoom: 19, attribution: ATTRIB }).addTo(map);
     const icon = L.divIcon({
       className: '',

@@ -49,7 +49,7 @@ export function StallLayoutEditor({
     if (!elRef.current || mapRef.current) return;
     const start = initialStalls.length ? initialStalls : generateStallGrid(center);
     posRef.current = Object.fromEntries(start.map((s) => [s.label, [s.lat, s.lng] as [number, number]]));
-    const map = L.map(elRef.current, { scrollWheelZoom: false });
+    const map = L.map(elRef.current, { scrollWheelZoom: false, zoomSnap: 0.5, zoomDelta: 0.5 });
     L.tileLayer(ESRI, { maxZoom: 20, attribution: ATTRIB }).addTo(map);
     map.fitBounds(L.latLngBounds(start.map((s) => [s.lat, s.lng] as [number, number])), { padding: [40, 40], maxZoom: 20 });
     mapRef.current = map;

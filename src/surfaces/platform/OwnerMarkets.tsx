@@ -260,8 +260,16 @@ function MarketConfigCard({
 
 export function OwnerMarkets() {
   const { data: markets, loading, reload } = useAsync(fetchMarkets, [], []);
-  const { data: maps, reload: reloadMaps } = useAsync(fetchAllMarketMaps, [], {});
+  const { data: maps, loading: mapsLoading, reload: reloadMaps } = useAsync(fetchAllMarketMaps, [], {});
   const [busy, setBusy] = useState(false);
+  // Hold the cards until BOTH markets and their saved settings have loaded, so each
+  // card initializes its picker from its own market's center — not the fallback
+  // (which would read as another/the default market's location). Stays true across
+  // refreshes so cards never unmount and reset.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!loading && !mapsLoading) setReady(true);
+  }, [loading, mapsLoading]);
 
   async function add() {
     setBusy(true);
@@ -328,7 +336,7 @@ export function OwnerMarkets() {
         </div>
       )}
 
-      {loading && !markets.length ? (
+      {!ready ? (
         <div className="h-64 animate-pulse rounded-2xl bg-brand-card" />
       ) : (
         <div className="space-y-5">

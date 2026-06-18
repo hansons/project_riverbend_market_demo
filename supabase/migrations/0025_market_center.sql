@@ -39,14 +39,12 @@ create policy markets_write on markets for all to authenticated
 -- Make the Winter market the active/front-page market, pointed at the Corvallis
 -- Indoor Winter Market venue: Guerber Hall, Benton County Fairgrounds (110 SW 53rd
 -- St). Clear any prior active flag first so exactly one market is active.
--- NOTE: re-running this re-applies the center below (it overwrites owner-UI tweaks),
--- so do any final pin fine-tuning in Owner → Markets AFTER your last reseed.
+-- The insert seeds an INITIAL center/zoom/shape for a fresh deploy; on conflict we
+-- only (re)set is_active, so the owner's UI choices for location, zoom, and shape are
+-- the source of truth and persist across reseeds (this migration never overwrites them).
 update market_settings set is_active = false;
 insert into market_settings (market_id, center_lat, center_lng, zoom, aspect, is_active)
 values ('22220000-0000-4000-8000-000000000003', 44.56682, -123.31480, 18, 'landscape', true)
 on conflict (market_id) do update set
-  center_lat = excluded.center_lat,
-  center_lng = excluded.center_lng,
-  zoom = excluded.zoom,
   is_active = true,
   updated_at = now();

@@ -13,11 +13,13 @@ create table if not exists market_settings (
   center_lng double precision,
   zoom       double precision,            -- owner-set satellite zoom (null → maps fit to stalls)
   aspect     text not null default 'landscape',   -- 'landscape' | 'portrait' | 'square' (satellite map shape)
+  is_active  boolean not null default false,      -- the front-page / active market (one true at a time)
   updated_at timestamptz not null default now()
 );
 -- For tables created by an earlier copy of this migration:
 alter table market_settings add column if not exists aspect text not null default 'landscape';
 alter table market_settings add column if not exists zoom double precision;
+alter table market_settings add column if not exists is_active boolean not null default false;
 
 alter table market_settings enable row level security;
 
@@ -34,14 +36,16 @@ drop policy if exists markets_write on markets;
 create policy markets_write on markets for all to authenticated
   using (is_superadmin()) with check (is_superadmin());
 
--- Point the Winter market (the demo flagship) at the Corvallis Indoor Winter
--- Market venue: Guerber Hall, Benton County Fairgrounds (110 SW 53rd St). Coords
--- are approximate — fine-tune the pin in Owner → Markets. do-update so re-running
--- re-applies the venue (preserves the owner's chosen shape/aspect).
-insert into market_settings (market_id, center_lat, center_lng, zoom, aspect)
-values ('22220000-0000-4000-8000-000000000003', 44.5646, -123.3093, 18, 'landscape')
+-- Make the Winter market the active/front-page market, pointed at the Corvallis
+-- Indoor Winter Market venue: Guerber Hall, Benton County Fairgrounds (110 SW 53rd
+-- St). Coords approximate — fine-tune the pin in Owner → Markets. Clear any prior
+-- active flag first so exactly one market is active. do-update re-applies on re-run.
+update market_settings set is_active = false;
+insert into market_settings (market_id, center_lat, center_lng, zoom, aspect, is_active)
+values ('22220000-0000-4000-8000-000000000003', 44.5646, -123.3093, 18, 'landscape', true)
 on conflict (market_id) do update set
   center_lat = excluded.center_lat,
   center_lng = excluded.center_lng,
   zoom = excluded.zoom,
+  is_active = true,
   updated_at = now();

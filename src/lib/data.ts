@@ -56,12 +56,20 @@ export async function fetchVendorConfirmed(vendorId: string): Promise<{ market_d
 /** The flagship market (lowest sort) and its next date on/after `fromISO`. The
  *  shopper front page keys off this so the cards + visit map reflect the main
  *  upcoming market — not whichever market happens to fall soonest on the calendar. */
+/** The owner-chosen active market id, falling back to the lowest-sort market. */
+async function activeMarketId(): Promise<string | null> {
+  const { data: active } = await supabase.from('market_settings').select('market_id').eq('is_active', true).limit(1);
+  const id = ((active as { market_id: string }[]) ?? [])[0]?.market_id;
+  if (id) return id;
+  const { data: mk } = await supabase.from('markets').select('id').order('sort').limit(1);
+  return ((mk as { id: string }[]) ?? [])[0]?.id ?? null;
+}
+
 export async function fetchFrontPageMarketDate(
   fromISO: string,
-): Promise<{ marketId: string; dateId: string; dateISO: string } | null> {
+): Promise<{ marketId: string; dateId: string | null; dateISO: string | null } | null> {
   if (!isSupabaseConfigured) return null;
-  const { data: mk } = await supabase.from('markets').select('id').order('sort').limit(1);
-  const marketId = ((mk as { id: string }[]) ?? [])[0]?.id;
+  const marketId = await activeMarketId();
   if (!marketId) return null;
   const { data: dt } = await supabase
     .from('market_dates')
@@ -71,7 +79,18 @@ export async function fetchFrontPageMarketDate(
     .order('date')
     .limit(1);
   const row = ((dt as { id: string; date: string }[]) ?? [])[0];
-  return row ? { marketId, dateId: row.id, dateISO: row.date } : null;
+  // Return the market even with no upcoming date — the map still frames the owner's
+  // location; assignments/attendance just stay empty until dates exist.
+  return { marketId, dateId: row?.id ?? null, dateISO: row?.date ?? null };
+}
+
+/** The active/front-page market record (owner-chosen, else lowest sort). */
+export async function fetchActiveMarket(): Promise<Market | null> {
+  if (!isSupabaseConfigured) return null;
+  const marketId = await activeMarketId();
+  if (!marketId) return null;
+  const { data } = await supabase.from('markets').select('*').eq('id', marketId).maybeSingle();
+  return (data as Market) ?? null;
 }
 
 /** Vendor ids confirmed (and active) for a market date — i.e. who's actually attending. */

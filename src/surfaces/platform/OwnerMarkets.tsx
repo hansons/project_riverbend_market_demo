@@ -6,6 +6,7 @@ import { fetchMarkets } from '@/lib/data';
 import {
   fetchAllMarketMaps,
   saveMarketMap,
+  setActiveMarket,
   aspectClass,
   MAP_ASPECTS,
   DEFAULT_CENTER,
@@ -76,10 +77,12 @@ function MarketConfigCard({
   market,
   settings,
   onChanged,
+  onActivate,
 }: {
   market: Market;
   settings: MarketMapSettings;
   onChanged: () => void;
+  onActivate: () => void;
 }) {
   const [name, setName] = useState(market.name);
   const [day, setDay] = useState(market.day_of_week);
@@ -133,7 +136,14 @@ function MarketConfigCard({
         className="flex w-full items-center justify-between gap-3 text-left"
       >
         <div className="min-w-0">
-          <p className="font-serif text-lg font-semibold text-brand-primary-dark">{name || 'Untitled market'}</p>
+          <p className="font-serif text-lg font-semibold text-brand-primary-dark">
+            {name || 'Untitled market'}
+            {settings.isActive && (
+              <span className="ml-2 rounded-full bg-status-ok/15 px-2 py-0.5 align-middle text-[11px] font-semibold text-status-ok">
+                ● Demo market
+              </span>
+            )}
+          </p>
           <p className="truncate text-xs text-brand-muted">
             {day}
             {location ? ` · ${location}` : ''}
@@ -228,11 +238,19 @@ function MarketConfigCard({
         <button className="btn-primary" onClick={save} disabled={saving}>
           {saving ? 'Saving…' : 'Save market'}
         </button>
+        {settings.isActive ? (
+          <span className="text-sm font-semibold text-status-ok">✓ Demo market</span>
+        ) : (
+          <button className="btn-outline" onClick={onActivate} disabled={saving}>
+            Set as demo market
+          </button>
+        )}
         <button className="text-sm font-semibold text-status-alert hover:underline" onClick={remove} disabled={saving}>
           Remove market
         </button>
         {msg === 'ok' && <span className="text-sm text-status-ok">✓ Saved</span>}
         {msg && msg !== 'ok' && <span className="text-sm text-status-alert">{msg}</span>}
+        <span className="ml-auto font-mono text-[11px] text-brand-muted/70">id …{market.id.slice(-4)}</span>
           </div>
         </div>
       )}
@@ -266,6 +284,11 @@ export function OwnerMarkets() {
     reloadMaps();
   }
 
+  async function activate(id: string) {
+    await setActiveMarket(id);
+    refresh();
+  }
+
   return (
     <div className="space-y-5">
       <div>
@@ -275,6 +298,36 @@ export function OwnerMarkets() {
           the Market Admin; the location is owner-controlled, so a deployment stays tied to one place.
         </p>
       </div>
+
+      {markets.length > 0 && (
+        <div className="card p-4">
+          <span className="field-label">Demo market</span>
+          <p className="mb-2 mt-0.5 text-xs text-brand-muted">
+            The market the public/shopper front page runs on — switch anytime.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {markets.map((m) => {
+              const isActive = maps[m.id]?.isActive ?? false;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => activate(m.id)}
+                  className={[
+                    'rounded-full border px-3 py-1 text-sm font-medium transition',
+                    isActive
+                      ? 'border-brand-primary bg-brand-primary text-white'
+                      : 'border-brand-line bg-brand-card text-brand-ink/70 hover:border-brand-primary/40',
+                  ].join(' ')}
+                >
+                  {isActive ? '● ' : ''}
+                  {m.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {loading && !markets.length ? (
         <div className="h-64 animate-pulse rounded-2xl bg-brand-card" />
       ) : (
@@ -283,8 +336,9 @@ export function OwnerMarkets() {
             <MarketConfigCard
               key={m.id}
               market={m}
-              settings={maps[m.id] ?? { center: null, zoom: null, aspect: 'landscape' }}
+              settings={maps[m.id] ?? { center: null, zoom: null, aspect: 'landscape', isActive: false }}
               onChanged={refresh}
+              onActivate={() => activate(m.id)}
             />
           ))}
         </div>

@@ -71,9 +71,10 @@ export interface MarketMapSettings {
   center: [number, number] | null;
   zoom: number | null;
   aspect: MapAspect;
+  isActive: boolean;
 }
 
-export const DEFAULT_MAP_SETTINGS: MarketMapSettings = { center: null, zoom: null, aspect: 'landscape' };
+export const DEFAULT_MAP_SETTINGS: MarketMapSettings = { center: null, zoom: null, aspect: 'landscape', isActive: false };
 
 const toAspect = (v: string | null | undefined): MapAspect => (v === 'portrait' || v === 'square' ? v : 'landscape');
 
@@ -88,30 +89,56 @@ export function aspectClass(aspect: MapAspect): string {
 export async function fetchMarketMap(marketId: string): Promise<MarketMapSettings> {
   const { data } = await supabase
     .from('market_settings')
-    .select('center_lat, center_lng, zoom, aspect')
+    .select('center_lat, center_lng, zoom, aspect, is_active')
     .eq('market_id', marketId)
     .maybeSingle();
-  const r = data as { center_lat: number | null; center_lng: number | null; zoom: number | null; aspect: string | null } | null;
+  const r = data as {
+    center_lat: number | null;
+    center_lng: number | null;
+    zoom: number | null;
+    aspect: string | null;
+    is_active: boolean | null;
+  } | null;
   return {
     center: r && r.center_lat != null && r.center_lng != null ? [r.center_lat, r.center_lng] : null,
     zoom: r?.zoom ?? null,
     aspect: toAspect(r?.aspect),
+    isActive: r?.is_active ?? false,
   };
 }
 
 /** Map settings for every market that has them, keyed by market id. */
 export async function fetchAllMarketMaps(): Promise<Record<string, MarketMapSettings>> {
-  const { data } = await supabase.from('market_settings').select('market_id, center_lat, center_lng, zoom, aspect');
-  const rows = (data as { market_id: string; center_lat: number | null; center_lng: number | null; zoom: number | null; aspect: string | null }[]) ?? [];
+  const { data } = await supabase.from('market_settings').select('market_id, center_lat, center_lng, zoom, aspect, is_active');
+  const rows =
+    (data as {
+      market_id: string;
+      center_lat: number | null;
+      center_lng: number | null;
+      zoom: number | null;
+      aspect: string | null;
+      is_active: boolean | null;
+    }[]) ?? [];
   const out: Record<string, MarketMapSettings> = {};
   for (const r of rows) {
     out[r.market_id] = {
       center: r.center_lat != null && r.center_lng != null ? [r.center_lat, r.center_lng] : null,
       zoom: r.zoom ?? null,
       aspect: toAspect(r.aspect),
+      isActive: r.is_active ?? false,
     };
   }
   return out;
+}
+
+/** Make `marketId` the single active/front-page market (owner only — RLS enforces). */
+export async function setActiveMarket(marketId: string): Promise<string | null> {
+  const clr = await supabase.from('market_settings').update({ is_active: false }).neq('market_id', marketId);
+  if (clr.error) return clr.error.message;
+  const { error } = await supabase
+    .from('market_settings')
+    .upsert({ market_id: marketId, is_active: true, updated_at: new Date().toISOString() }, { onConflict: 'market_id' });
+  return error?.message ?? null;
 }
 
 /** Set a market's default map center + zoom + shape (owner only — RLS enforces). */

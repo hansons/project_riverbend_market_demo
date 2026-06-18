@@ -1,4 +1,4 @@
-import { fetchVendors, fetchMarkets, fetchCurrentOfferings } from '@/lib/data';
+import { fetchVendors, fetchActiveMarket, fetchCurrentOfferings } from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
 import { useTheme } from '@/theme/ThemeProvider';
 import { navigate } from '@/lib/router';
@@ -16,10 +16,9 @@ export function PublicHomeAlt() {
   const { tenant } = useTheme();
   const visit = useVisitList();
   const { data: vendors } = useAsync(fetchVendors, [], []);
-  const { data: markets } = useAsync(fetchMarkets, [], []);
+  const { data: nextMarket } = useAsync(fetchActiveMarket, [], null);
   const reference = thisSaturdayISO();
   const { data: fresh } = useAsync(() => fetchCurrentOfferings(reference), [], []);
-  const nextMarket = markets[0];
 
   type FreshItem = { o: VendorOffering; vendor: Vendor };
   const freshItems: FreshItem[] = fresh

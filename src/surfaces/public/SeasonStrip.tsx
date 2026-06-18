@@ -67,7 +67,7 @@ export function SeasonStrip({ layout = 'stacked' }: { layout?: 'stacked' | 'spli
       // Limit the panel to vendors confirmed for the front-page market (the
       // flagship's next date), so items from vendors who won't be there are hidden.
       const fp = await fetchFrontPageMarketDate(todayISO());
-      const attending = fp ? await fetchAttendingForDate(fp.dateId) : [];
+      const attending = fp?.dateId ? await fetchAttendingForDate(fp.dateId) : [];
       return { items, vendors, products, attending };
     },
     [],

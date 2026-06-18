@@ -31,7 +31,7 @@ export function VisitPanel() {
       const [vendors, stalls, assignsRaw, mapSettings] = await Promise.all([
         fetchVendors(),
         fp ? fetchMarketStalls(fp.marketId) : Promise.resolve([] as StallPos[]),
-        fp ? fetchAssignmentsForDate(fp.dateId) : Promise.resolve([]),
+        fp?.dateId ? fetchAssignmentsForDate(fp.dateId) : Promise.resolve([]),
         fp ? fetchMarketMap(fp.marketId) : Promise.resolve(DEFAULT_MAP_SETTINGS),
       ]);
       const assigns: Assign[] = assignsRaw.map((a) => ({ stall: a.stall, slug: a.slug }));

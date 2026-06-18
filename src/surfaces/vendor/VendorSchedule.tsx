@@ -5,6 +5,7 @@ import { formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
 import { MarketGeoMap } from '@/components/MarketGeoMap';
 import { fetchMarketStalls, fetchMarketMap, DEFAULT_MAP_SETTINGS, DEFAULT_CENTER } from '@/lib/stalls';
+import { fetchActiveMarket } from '@/lib/data';
 import type { ScheduleStatus, Vendor } from '@/lib/types';
 
 function todayISO(): string {
@@ -22,16 +23,20 @@ const STATUS_PILL: Record<ScheduleStatus | 'none', { label: string; className: s
 export function VendorSchedule({ vendor }: { vendor: Vendor }) {
   const { data: dates, loading: datesLoading } = useAsync(fetchMarketDates, [], []);
   const { data: sched, loading: schedLoading, reload } = useAsync(() => fetchMySchedule(vendor.id), [vendor.id], []);
+  const { data: demoMarket } = useAsync(fetchActiveMarket, [], null);
+  const demoMarketId = demoMarket?.id ?? null;
   const [busy, setBusy] = useState<string | null>(null);
   const [mapView, setMapView] = useState<'satellite' | 'grid'>('satellite');
 
+  // Follow the owner's demo (active) market.
+  const inDemo = (marketId: string) => !demoMarketId || marketId === demoMarketId;
   const today = todayISO();
-  const upcomingDates = dates.filter((d) => d.date >= today);
+  const upcomingDates = dates.filter((d) => d.date >= today && inDemo(d.market_id));
   const byDate = new Map(sched.map((s) => [s.market_date_id, s]));
   const myStops = sched
     .filter((s) => s.status === 'confirmed' && s.stalls.some((st) => /^[A-D]\d+$/.test(st)))
     .map((s) => ({ s, d: dates.find((x) => x.id === s.market_date_id) }))
-    .filter((x) => x.d && x.d.date >= today)
+    .filter((x) => x.d && x.d.date >= today && inDemo(x.d.market_id))
     .sort((a, b) => a.d!.date.localeCompare(b.d!.date));
   const myNext = myStops[0];
 

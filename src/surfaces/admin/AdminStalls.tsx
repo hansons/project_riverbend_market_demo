@@ -19,6 +19,7 @@ import { MarketGeoMap } from '@/components/MarketGeoMap';
 import { StallLayoutEditor } from '@/components/StallLayoutEditor';
 import { StallGridEditor } from '@/components/StallGridEditor';
 import { fetchMarketStalls, fetchMarketMap, DEFAULT_CENTER, DEFAULT_MAP_SETTINGS } from '@/lib/stalls';
+import { fetchActiveMarket } from '@/lib/data';
 import { CsvToolbar } from '@/components/CsvToolbar';
 
 const TOTAL_STALLS = 48; // A–D × 12
@@ -46,18 +47,24 @@ function todayISO(): string {
 export function AdminStalls() {
   const { data: dates } = useAsync(fetchMarketDates, [], []);
   const { data: allVendors } = useAsync(fetchAllVendors, [], []);
+  const { data: demoMarket } = useAsync(fetchActiveMarket, [], null);
+  const demoMarketId = demoMarket?.id ?? null;
   const [picked, setPicked] = useState('');
-  // Past dates stay in `dates` (they're copy sources) but aren't shown in the picker.
+  // Follow the owner's demo (active) market: scope the date picker + stall layout
+  // to it, so this surface never points at a different market than the demo.
   const today = todayISO();
-  const upcomingDates = dates.filter((d) => d.date >= today);
-  const dateId = picked || upcomingDates[0]?.id || dates[0]?.id || '';
+  const marketDates = demoMarketId ? dates.filter((d) => d.market_id === demoMarketId) : dates;
+  const upcomingDates = marketDates.filter((d) => d.date >= today);
+  const validPicked = picked && marketDates.some((d) => d.id === picked) ? picked : '';
+  const dateId = validPicked || upcomingDates[0]?.id || marketDates[0]?.id || '';
   const { data: rows, loading, reload } = useAsync(
     () => (dateId ? fetchScheduleForDate(dateId) : Promise.resolve([])),
     [dateId],
     [],
   );
 
-  const currentMarketId = dates.find((d) => d.id === dateId)?.market_id ?? null;
+  // The stall layout/map follows the demo market itself (even if it has no dates yet).
+  const currentMarketId = demoMarketId ?? (dates.find((d) => d.id === dateId)?.market_id ?? null);
   const { data: marketStalls, reload: reloadStalls } = useAsync(
     () => (currentMarketId ? fetchMarketStalls(currentMarketId) : Promise.resolve([])),
     [currentMarketId],
@@ -349,7 +356,7 @@ export function AdminStalls() {
 
       {hint && <p className="text-sm text-brand-berry">{hint}</p>}
 
-      {!loading && dateId && (
+      {!loading && currentMarketId && (
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             {(['grid', 'satellite'] as const).map((m) => (

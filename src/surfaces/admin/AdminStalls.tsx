@@ -8,6 +8,7 @@ import {
   upsertScheduleBulk,
   setStalls,
   addVendorToDay,
+  addVendorToDayWithStall,
   removeFromDay,
   copyAssignments,
 } from '@/lib/adminData';
@@ -18,7 +19,7 @@ import { MarketMap } from '@/components/MarketMap';
 import { MarketGeoMap } from '@/components/MarketGeoMap';
 import { StallLayoutEditor } from '@/components/StallLayoutEditor';
 import { StallGridEditor } from '@/components/StallGridEditor';
-import { fetchMarketStalls, fetchMarketMap, DEFAULT_CENTER, DEFAULT_MAP_SETTINGS } from '@/lib/stalls';
+import { fetchMarketStalls, fetchMarketMap, categoryColor, DEFAULT_CENTER, DEFAULT_MAP_SETTINGS } from '@/lib/stalls';
 import { fetchActiveMarket } from '@/lib/data';
 import { CsvToolbar } from '@/components/CsvToolbar';
 
@@ -80,6 +81,8 @@ export function AdminStalls() {
   const aspect = marketMap.aspect;
 
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [selectedStall, setSelectedStall] = useState<string | null>(null);
+  const [fillTab, setFillTab] = useState<'category' | 'auto'>('category');
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [mapView, setMapView] = useState<'grid' | 'satellite'>('grid');
@@ -97,6 +100,30 @@ export function AdminStalls() {
   const occupied: Record<string, { name: string }> = {};
   for (const r of confirmed) for (const st of r.stalls) occupied[st] = { name: r.vendors?.name ?? 'Vendor' };
   const filledCells = Object.keys(occupied).length;
+
+  // ── Fill open stalls (stall-first, category-matched suggestions) ──
+  const openStalls = marketStalls
+    .filter((s) => !occupied[s.label] && !disabledStalls.has(s.label))
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+  const normCat = (c: string | null | undefined) => (c ?? '').trim().toLowerCase();
+  const selStall = selectedStall ? marketStalls.find((s) => s.label === selectedStall) ?? null : null;
+  const selStallCategory = selStall?.category ?? null;
+  const catMatches = (c: string | null | undefined) => !selStallCategory || normCat(c) === normCat(selStallCategory);
+  // "By category" tab: vendors that fit the selected stall.
+  const placeable = confirmed.filter((r) => r.stalls.length === 0 && catMatches(r.vendors?.category));
+  const addableMatch = addable.filter((v) => catMatches(v.category));
+  // "Auto-fill" tab: greedily pair unplaced confirmed vendors to category-matched open stalls.
+  const autoUsed = new Set<string>();
+  const autoPairs: { stall: string; vendorId: string; name: string }[] = [];
+  for (const s of openStalls) {
+    if (!s.category) continue;
+    const r = confirmed.find(
+      (x) => x.stalls.length === 0 && !autoUsed.has(x.vendor_id) && normCat(x.vendors?.category) === normCat(s.category),
+    );
+    if (!r) continue;
+    autoUsed.add(r.vendor_id);
+    autoPairs.push({ stall: s.label, vendorId: r.vendor_id, name: r.vendors?.name ?? 'Vendor' });
+  }
 
   // Category coverage + balance recommendations: which categories the active
   // vendor pool can offer, how many are scheduled today, and who fills the gaps.
@@ -152,6 +179,29 @@ export function AdminStalls() {
     setBusy(false);
     if (err) setHint(err);
     else reload();
+  }
+
+  function placeConfirmed(scheduleId: string) {
+    if (!selectedStall) return;
+    const stall = selectedStall;
+    setSelectedStall(null);
+    run(() => setStalls(scheduleId, [stall]));
+  }
+  function addAndPlace(vendorId: string) {
+    if (!selectedStall) return;
+    const stall = selectedStall;
+    setSelectedStall(null);
+    run(() => addVendorToDayWithStall(vendorId, dateId, [stall]));
+  }
+  function autoFill() {
+    if (!autoPairs.length) return;
+    if (!window.confirm(`Auto-fill ${autoPairs.length} stall${autoPairs.length === 1 ? '' : 's'} with category-matched vendors?`))
+      return;
+    run(() =>
+      upsertScheduleBulk(
+        autoPairs.map((p) => ({ vendor_id: p.vendorId, market_date_id: dateId, status: 'confirmed', stalls: [p.stall] })),
+      ),
+    );
   }
 
   async function clickCell(label: string) {
@@ -457,6 +507,143 @@ export function AdminStalls() {
         </div>
       )}
 
+      {!loading && dateId && openStalls.length > 0 && (
+        <div className="card p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-lg">Fill open stalls</h3>
+            <span className="chip">{openStalls.length} open</span>
+          </div>
+          <div className="mt-2 inline-flex rounded-lg border border-brand-line p-0.5 text-sm">
+            {(
+              [
+                ['category', 'By category'],
+                ['auto', 'Auto-fill'],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setFillTab(k)}
+                className={
+                  fillTab === k
+                    ? 'rounded-md bg-brand-primary px-3 py-1 font-medium text-white'
+                    : 'rounded-md px-3 py-1 text-brand-ink/70 hover:bg-brand-paper'
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {fillTab === 'category' ? (
+            <div className="mt-3">
+              <p className="text-xs text-brand-muted">
+                Click an open stall, then assign a vendor whose category matches it.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {openStalls.map((s) => {
+                  const sel = selectedStall === s.label;
+                  const color = categoryColor(s.category);
+                  return (
+                    <button
+                      key={s.label}
+                      onClick={() => {
+                        setSelectedStall(sel ? null : s.label);
+                        setSelectedVendorId(null);
+                      }}
+                      className={[
+                        'rounded-full border px-2.5 py-1 text-sm font-medium transition',
+                        sel
+                          ? 'border-brand-primary bg-brand-primary text-white'
+                          : 'bg-brand-card text-brand-ink/80 hover:bg-brand-paper',
+                      ].join(' ')}
+                      style={!sel ? { borderColor: color ?? 'rgb(var(--brand-line))' } : undefined}
+                    >
+                      {s.label}
+                      {s.category ? ` · ${s.category}` : ''}
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedStall && (
+                <div className="mt-3 border-t border-brand-line pt-3">
+                  <p className="text-sm font-medium text-brand-ink">
+                    Assign {selectedStall}
+                    {selStallCategory && <span className="text-brand-muted"> · matching {selStallCategory}</span>}
+                  </p>
+                  {placeable.length === 0 && addableMatch.length === 0 ? (
+                    <p className="mt-1 text-sm text-brand-muted">
+                      No {selStallCategory ? `${selStallCategory} ` : ''}vendors available.
+                      {!selStallCategory && ' Set the stall’s category in “Edit layout” to get matched suggestions.'}
+                    </p>
+                  ) : (
+                    <div className="mt-2 space-y-1.5">
+                      {placeable.map((r) => (
+                        <div key={`p-${r.id}`} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="min-w-0 truncate">
+                            {categoryEmoji(r.vendors?.category ?? '')}{' '}
+                            <span className="font-medium text-brand-ink">{r.vendors?.name}</span>
+                            <span className="ml-1 text-xs text-brand-muted">· {r.vendors?.category}</span>
+                          </span>
+                          <button
+                            onClick={() => placeConfirmed(r.id)}
+                            disabled={busy}
+                            className="shrink-0 rounded-lg border border-brand-primary px-3 py-1 text-xs font-semibold text-brand-ink hover:bg-brand-primary/10"
+                          >
+                            Place here
+                          </button>
+                        </div>
+                      ))}
+                      {addableMatch.map((v) => (
+                        <div key={`a-${v.id}`} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="min-w-0 truncate">
+                            {categoryEmoji(v.category)} <span className="font-medium text-brand-ink">{v.name}</span>
+                            <span className="ml-1 text-xs text-brand-muted">· {v.category}</span>
+                            <span className="ml-1 text-xs text-brand-berry">(not scheduled)</span>
+                          </span>
+                          <button
+                            onClick={() => addAndPlace(v.id)}
+                            disabled={busy}
+                            className="shrink-0 rounded-lg border border-brand-line px-3 py-1 text-xs font-semibold hover:bg-brand-paper"
+                          >
+                            Add &amp; place
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mt-3">
+              <p className="text-xs text-brand-muted">
+                Place your confirmed-but-unplaced vendors into open stalls whose category matches theirs.
+              </p>
+              {autoPairs.length === 0 ? (
+                <p className="mt-2 text-sm text-brand-muted">
+                  No category-matched placements available — categorize stalls in “Edit layout”, and confirm vendors
+                  whose category matches.
+                </p>
+              ) : (
+                <>
+                  <ul className="mt-2 max-h-40 space-y-0.5 overflow-auto text-sm">
+                    {autoPairs.map((p) => (
+                      <li key={p.stall} className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-brand-ink">{p.name}</span>
+                        <span className="chip shrink-0">{p.stall}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button className="btn-primary mt-3" onClick={autoFill} disabled={busy}>
+                    Auto-fill {autoPairs.length} stall{autoPairs.length === 1 ? '' : 's'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Scheduled (placeable) */}
         <div>
@@ -478,7 +665,10 @@ export function AdminStalls() {
                     <div className="flex items-center justify-between gap-2">
                       <button
                         className="min-w-0 truncate text-left text-sm font-medium text-brand-ink"
-                        onClick={() => setSelectedVendorId(selected ? null : r.vendor_id)}
+                        onClick={() => {
+                          setSelectedVendorId(selected ? null : r.vendor_id);
+                          setSelectedStall(null);
+                        }}
                       >
                         {categoryEmoji(r.vendors?.category ?? '')} {r.vendors?.name}
                       </button>

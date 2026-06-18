@@ -96,6 +96,21 @@ export async function addVendorToDay(vendorId: string, marketDateId: string): Pr
   return error?.message ?? null;
 }
 
+/** Add an active vendor to a market day as confirmed AND place them on stalls (one step). */
+export async function addVendorToDayWithStall(
+  vendorId: string,
+  marketDateId: string,
+  stalls: string[],
+): Promise<string | null> {
+  const { error } = await supabase
+    .from('vendor_schedule')
+    .upsert(
+      { vendor_id: vendorId, market_date_id: marketDateId, status: 'confirmed', stalls },
+      { onConflict: 'vendor_id,market_date_id' },
+    );
+  return error?.message ?? null;
+}
+
 export async function removeFromDay(scheduleId: string): Promise<string | null> {
   const { error } = await supabase.from('vendor_schedule').delete().eq('id', scheduleId);
   return error?.message ?? null;

@@ -123,6 +123,7 @@ export function AdminStalls() {
   const [editingLayout, setEditingLayout] = useState(false);
   const [editingGridStalls, setEditingGridStalls] = useState(false);
   const [colorBy, setColorBy] = useState<'status' | 'category'>('category');
+  const [schedFilter, setSchedFilter] = useState<'all' | 'unassigned' | 'assigned'>('all');
   const [importPreview, setImportPreview] = useState<{ rows: ImportRow[]; skipped: number; dates: Set<string> } | null>(null);
 
   // Recurring-series preview for the "Add market day" panel (deduped against existing days).
@@ -133,6 +134,14 @@ export function AdminStalls() {
   const seriesCapped = series.length >= 104;
 
   const confirmed = rows.filter((r) => r.status === 'confirmed');
+  const unassignedCount = confirmed.filter((r) => r.stalls.length === 0).length;
+  const assignedCount = confirmed.length - unassignedCount;
+  const shownConfirmed =
+    schedFilter === 'assigned'
+      ? confirmed.filter((r) => r.stalls.length > 0)
+      : schedFilter === 'unassigned'
+        ? confirmed.filter((r) => r.stalls.length === 0)
+        : confirmed;
   const scheduledIds = new Set(confirmed.map((r) => r.vendor_id));
   const addable = allVendors.filter((v) => v.status === 'active' && !scheduledIds.has(v.id));
 
@@ -893,13 +902,40 @@ export function AdminStalls() {
         <div>
           <h3 className="text-lg">Scheduled today ({confirmed.length})</h3>
           <p className="mt-0.5 text-xs text-brand-muted">Click a vendor to select, then click map stalls.</p>
+          {!loading && confirmed.length > 0 && (
+            <div className="mt-2 inline-flex rounded-lg border border-brand-line p-0.5 text-xs">
+              {(
+                [
+                  ['all', `All ${confirmed.length}`],
+                  ['unassigned', `Unassigned ${unassignedCount}`],
+                  ['assigned', `Assigned ${assignedCount}`],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  onClick={() => setSchedFilter(k)}
+                  className={
+                    schedFilter === k
+                      ? 'rounded-md bg-brand-primary px-2.5 py-1 font-medium text-white'
+                      : 'rounded-md px-2.5 py-1 text-brand-ink/70 hover:bg-brand-paper'
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           {loading ? (
             <div className="mt-3 h-40 animate-pulse rounded-2xl bg-brand-card" />
           ) : confirmed.length === 0 ? (
             <p className="mt-2 text-sm text-brand-muted">No confirmed vendors yet — add some, or copy last market.</p>
+          ) : shownConfirmed.length === 0 ? (
+            <p className="mt-3 text-sm text-brand-muted">
+              {schedFilter === 'unassigned' ? 'Every confirmed vendor has a stall.' : 'No vendors placed yet.'}
+            </p>
           ) : (
             <div className="mt-3 space-y-2">
-              {confirmed.map((r) => {
+              {shownConfirmed.map((r) => {
                 const selected = r.vendor_id === selectedVendorId;
                 return (
                   <div

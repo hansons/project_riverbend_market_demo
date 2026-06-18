@@ -194,7 +194,7 @@ export function AdminStalls() {
     run(() => addVendorToDayWithStall(vendorId, dateId, [stall]));
   }
   function autoFill() {
-    if (!autoPairs.length) return;
+    if (!dateId || !autoPairs.length) return;
     if (!window.confirm(`Auto-fill ${autoPairs.length} stall${autoPairs.length === 1 ? '' : 's'} with category-matched vendors?`))
       return;
     run(() =>
@@ -202,6 +202,17 @@ export function AdminStalls() {
         autoPairs.map((p) => ({ vendor_id: p.vendorId, market_date_id: dateId, status: 'confirmed', stalls: [p.stall] })),
       ),
     );
+  }
+
+  function addVendor(vendorId: string) {
+    if (!dateId) {
+      setHint('This market has no upcoming market days yet — add a market day before scheduling vendors.');
+      return;
+    }
+    run(() => addVendorToDay(vendorId, dateId)).then(() => {
+      setSelectedVendorId(vendorId);
+      setSelectedStall(null);
+    });
   }
 
   async function clickCell(label: string) {
@@ -719,7 +730,7 @@ export function AdminStalls() {
                           <span className="ml-1 text-xs text-brand-berry">fills {v.category}</span>
                         </span>
                         <button
-                          onClick={() => run(() => addVendorToDay(v.id, dateId)).then(() => setSelectedVendorId(v.id))}
+                          onClick={() => addVendor(v.id)}
                           disabled={busy}
                           className="shrink-0 rounded-lg border border-brand-accent px-3 py-1 text-xs font-semibold text-brand-ink hover:bg-brand-accent/15"
                         >
@@ -739,7 +750,7 @@ export function AdminStalls() {
                         <span className="ml-1 text-xs text-brand-muted">· {v.category}</span>
                       </span>
                       <button
-                        onClick={() => run(() => addVendorToDay(v.id, dateId)).then(() => setSelectedVendorId(v.id))}
+                        onClick={() => addVendor(v.id)}
                         disabled={busy}
                         className="shrink-0 rounded-lg border border-brand-line px-3 py-1 text-xs font-semibold hover:bg-brand-paper"
                       >

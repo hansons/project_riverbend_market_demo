@@ -69,10 +69,11 @@ export const MAP_ASPECTS: MapAspect[] = ['landscape', 'portrait', 'square'];
 
 export interface MarketMapSettings {
   center: [number, number] | null;
+  zoom: number | null;
   aspect: MapAspect;
 }
 
-export const DEFAULT_MAP_SETTINGS: MarketMapSettings = { center: null, aspect: 'landscape' };
+export const DEFAULT_MAP_SETTINGS: MarketMapSettings = { center: null, zoom: null, aspect: 'landscape' };
 
 const toAspect = (v: string | null | undefined): MapAspect => (v === 'portrait' || v === 'square' ? v : 'landscape');
 
@@ -87,34 +88,41 @@ export function aspectClass(aspect: MapAspect): string {
 export async function fetchMarketMap(marketId: string): Promise<MarketMapSettings> {
   const { data } = await supabase
     .from('market_settings')
-    .select('center_lat, center_lng, aspect')
+    .select('center_lat, center_lng, zoom, aspect')
     .eq('market_id', marketId)
     .maybeSingle();
-  const r = data as { center_lat: number | null; center_lng: number | null; aspect: string | null } | null;
+  const r = data as { center_lat: number | null; center_lng: number | null; zoom: number | null; aspect: string | null } | null;
   return {
     center: r && r.center_lat != null && r.center_lng != null ? [r.center_lat, r.center_lng] : null,
+    zoom: r?.zoom ?? null,
     aspect: toAspect(r?.aspect),
   };
 }
 
 /** Map settings for every market that has them, keyed by market id. */
 export async function fetchAllMarketMaps(): Promise<Record<string, MarketMapSettings>> {
-  const { data } = await supabase.from('market_settings').select('market_id, center_lat, center_lng, aspect');
-  const rows = (data as { market_id: string; center_lat: number | null; center_lng: number | null; aspect: string | null }[]) ?? [];
+  const { data } = await supabase.from('market_settings').select('market_id, center_lat, center_lng, zoom, aspect');
+  const rows = (data as { market_id: string; center_lat: number | null; center_lng: number | null; zoom: number | null; aspect: string | null }[]) ?? [];
   const out: Record<string, MarketMapSettings> = {};
   for (const r of rows) {
     out[r.market_id] = {
       center: r.center_lat != null && r.center_lng != null ? [r.center_lat, r.center_lng] : null,
+      zoom: r.zoom ?? null,
       aspect: toAspect(r.aspect),
     };
   }
   return out;
 }
 
-/** Set a market's default map center + shape (owner only — RLS enforces). */
-export async function saveMarketMap(marketId: string, center: [number, number], aspect: MapAspect): Promise<string | null> {
+/** Set a market's default map center + zoom + shape (owner only — RLS enforces). */
+export async function saveMarketMap(
+  marketId: string,
+  center: [number, number],
+  zoom: number,
+  aspect: MapAspect,
+): Promise<string | null> {
   const { error } = await supabase.from('market_settings').upsert(
-    { market_id: marketId, center_lat: center[0], center_lng: center[1], aspect, updated_at: new Date().toISOString() },
+    { market_id: marketId, center_lat: center[0], center_lng: center[1], zoom, aspect, updated_at: new Date().toISOString() },
     { onConflict: 'market_id' },
   );
   return error?.message ?? null;

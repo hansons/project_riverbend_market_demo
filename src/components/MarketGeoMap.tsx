@@ -40,6 +40,7 @@ export function MarketGeoMap({
   onCellClick,
   stalls,
   center = DEFAULT_CENTER,
+  zoom = null,
   colorBy = 'status',
   aspect = 'landscape',
 }: {
@@ -48,14 +49,15 @@ export function MarketGeoMap({
   onCellClick?: (label: string) => void;
   stalls?: StallPos[];
   center?: [number, number];
+  zoom?: number | null;
   colorBy?: 'status' | 'category';
   aspect?: MapAspect;
 }) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
-  const state = useRef({ occupied, highlight, onCellClick, stalls, center, colorBy });
-  state.current = { occupied, highlight, onCellClick, stalls, center, colorBy };
+  const state = useRef({ occupied, highlight, onCellClick, stalls, center, zoom, colorBy });
+  state.current = { occupied, highlight, onCellClick, stalls, center, zoom, colorBy };
 
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
@@ -65,7 +67,12 @@ export function MarketGeoMap({
     // so the stalls can grow to fill the view when you zoom right in. Half-step
     // zoom (zoomSnap/zoomDelta) lets you stop before the imagery turns blurry.
     L.tileLayer(ESRI, { maxZoom: 22, maxNativeZoom: 19, attribution: ATTRIB }).addTo(map);
-    map.fitBounds(L.latLngBounds(positions.map((p) => [p.lat, p.lng] as [number, number])), { padding: [40, 40], maxZoom: 20 });
+    // Owner-framed view (center + zoom) when set; otherwise auto-fit to the stalls.
+    if (state.current.zoom != null) {
+      map.setView(state.current.center, state.current.zoom);
+    } else {
+      map.fitBounds(L.latLngBounds(positions.map((p) => [p.lat, p.lng] as [number, number])), { padding: [40, 40], maxZoom: 20 });
+    }
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
     return () => {

@@ -23,19 +23,21 @@ const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'
 // chosen location. Drag the pin or click the map to move it.
 function LocationPicker({
   value,
+  zoom,
   aspect,
   onChange,
 }: {
   value: [number, number];
+  zoom: number;
   aspect: MapAspect;
-  onChange: (c: [number, number]) => void;
+  onChange: (center: [number, number], zoom: number) => void;
 }) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   useEffect(() => {
     const el = elRef.current;
     if (!el || mapRef.current) return;
-    const map = L.map(el, { scrollWheelZoom: false, zoomSnap: 0.5, zoomDelta: 0.5 }).setView(value, 18);
+    const map = L.map(el, { scrollWheelZoom: false, zoomSnap: 0.5, zoomDelta: 0.5 }).setView(value, zoom);
     L.tileLayer(ESRI, { maxZoom: 22, maxNativeZoom: 19, attribution: ATTRIB }).addTo(map);
     const icon = L.divIcon({
       className: '',
@@ -44,14 +46,17 @@ function LocationPicker({
       iconAnchor: [15, 28],
     });
     const marker = L.marker(value, { draggable: true, icon }).addTo(map);
-    marker.on('dragend', () => {
+    // Report the pin position + current zoom whenever either changes.
+    const emit = () => {
       const ll = marker.getLatLng();
-      onChange([ll.lat, ll.lng]);
-    });
+      onChange([ll.lat, ll.lng], map.getZoom());
+    };
+    marker.on('dragend', emit);
     map.on('click', (e) => {
       marker.setLatLng(e.latlng);
-      onChange([e.latlng.lat, e.latlng.lng]);
+      emit();
     });
+    map.on('zoomend', emit);
     mapRef.current = map;
     // Re-fit Leaflet whenever the chosen shape resizes the container (fires after
     // layout, so the satellite tiles reload for the new size instead of vanishing).
@@ -83,6 +88,7 @@ function MarketConfigCard({
   const [location, setLocation] = useState(market.location);
   const [blurb, setBlurb] = useState(market.blurb ?? '');
   const [center, setCenter] = useState<[number, number]>(settings.center ?? DEFAULT_CENTER);
+  const [zoom, setZoom] = useState<number>(settings.zoom ?? 18);
   const [aspect, setAspect] = useState<MapAspect>(settings.aspect);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<'ok' | string | null>(null);
@@ -98,7 +104,7 @@ function MarketConfigCard({
         season: season.trim(),
         location: location.trim(),
         blurb: blurb.trim() || null,
-      })) || (await saveMarketMap(market.id, center, aspect));
+      })) || (await saveMarketMap(market.id, center, zoom, aspect));
     setSaving(false);
     if (err) setMsg(err);
     else {
@@ -185,10 +191,19 @@ function MarketConfigCard({
             where the stall map opens — the Market Admin can’t move it.
           </p>
           {/* key on aspect → recreate the map in the correctly-sized container
-              (re-inits from `center`, so the chosen location is preserved). */}
-          <LocationPicker key={aspect} value={center} aspect={aspect} onChange={setCenter} />
+              (re-inits from center + zoom, so the chosen framing is preserved). */}
+          <LocationPicker
+            key={aspect}
+            value={center}
+            zoom={zoom}
+            aspect={aspect}
+            onChange={(c, z) => {
+              setCenter(c);
+              setZoom(z);
+            }}
+          />
           <p className="mt-1 text-[11px] text-brand-muted">
-            {center[0].toFixed(5)}, {center[1].toFixed(5)} · {aspect}
+            {center[0].toFixed(5)}, {center[1].toFixed(5)} · zoom {zoom} · {aspect}
           </p>
         </div>
       </div>

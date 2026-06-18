@@ -4,7 +4,7 @@ import { useAsync } from '@/lib/useAsync';
 import { formatDate } from '@/lib/format';
 import { MarketMap } from '@/components/MarketMap';
 import { MarketGeoMap } from '@/components/MarketGeoMap';
-import { fetchMarketStalls, fetchMarketMap, DEFAULT_MAP_SETTINGS } from '@/lib/stalls';
+import { fetchMarketStalls, fetchMarketMap, DEFAULT_MAP_SETTINGS, DEFAULT_CENTER } from '@/lib/stalls';
 import type { ScheduleStatus, Vendor } from '@/lib/types';
 
 function todayISO(): string {
@@ -104,7 +104,13 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
             stallsLoading ? (
               <div className="h-[440px] animate-pulse rounded-2xl bg-brand-paper" />
             ) : (
-              <MarketGeoMap stalls={marketStalls} highlight={myNext.s.stalls} aspect={marketMap.aspect} />
+              <MarketGeoMap
+                stalls={marketStalls}
+                highlight={myNext.s.stalls}
+                center={marketMap.center ?? DEFAULT_CENTER}
+                zoom={marketMap.zoom}
+                aspect={marketMap.aspect}
+              />
             )
           ) : (
             <MarketMap

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAsync } from '@/lib/useAsync';
 import { fetchVendors, fetchAssignmentsForDate, fetchFrontPageMarketDate } from '@/lib/data';
-import { fetchMarketStalls, fetchMarketMap, DEFAULT_MAP_SETTINGS, type StallPos } from '@/lib/stalls';
+import { fetchMarketStalls, fetchMarketMap, DEFAULT_MAP_SETTINGS, DEFAULT_CENTER, type StallPos } from '@/lib/stalls';
 import { formatDate } from '@/lib/format';
 import { navigate } from '@/lib/router';
 import { MarketMap } from '@/components/MarketMap';
@@ -35,7 +35,15 @@ export function VisitPanel() {
         fp ? fetchMarketMap(fp.marketId) : Promise.resolve(DEFAULT_MAP_SETTINGS),
       ]);
       const assigns: Assign[] = assignsRaw.map((a) => ({ stall: a.stall, slug: a.slug }));
-      return { vendors, stalls, assigns, dateISO: fp?.dateISO ?? null, aspect: mapSettings.aspect };
+      return {
+        vendors,
+        stalls,
+        assigns,
+        dateISO: fp?.dateISO ?? null,
+        center: mapSettings.center,
+        zoom: mapSettings.zoom,
+        aspect: mapSettings.aspect,
+      };
     },
     [],
     {
@@ -43,6 +51,8 @@ export function VisitPanel() {
       stalls: [] as StallPos[],
       assigns: [] as Assign[],
       dateISO: null as string | null,
+      center: DEFAULT_MAP_SETTINGS.center,
+      zoom: DEFAULT_MAP_SETTINGS.zoom,
       aspect: DEFAULT_MAP_SETTINGS.aspect,
     },
   );
@@ -98,7 +108,13 @@ export function VisitPanel() {
       {loading ? (
         <div className="h-64 animate-pulse rounded-2xl bg-brand-paper" />
       ) : view === 'satellite' ? (
-        <MarketGeoMap stalls={data.stalls} highlight={highlight} aspect={data.aspect} />
+        <MarketGeoMap
+          stalls={data.stalls}
+          highlight={highlight}
+          center={data.center ?? DEFAULT_CENTER}
+          zoom={data.zoom}
+          aspect={data.aspect}
+        />
       ) : (
         <MarketMap
           stalls={gridStalls}

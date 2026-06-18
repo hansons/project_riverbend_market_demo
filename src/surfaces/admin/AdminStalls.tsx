@@ -442,6 +442,7 @@ export function AdminStalls() {
               onCellClick={clickCell}
               stalls={marketStalls}
               center={center}
+              zoom={marketMap.zoom}
               colorBy={colorBy}
               aspect={aspect}
             />

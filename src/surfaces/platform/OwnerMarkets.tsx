@@ -275,7 +275,7 @@ export function OwnerMarkets() {
           the Market Admin; the location is owner-controlled, so a deployment stays tied to one place.
         </p>
       </div>
-      {loading ? (
+      {loading && !markets.length ? (
         <div className="h-64 animate-pulse rounded-2xl bg-brand-card" />
       ) : (
         <div className="space-y-5">
@@ -283,7 +283,7 @@ export function OwnerMarkets() {
             <MarketConfigCard
               key={m.id}
               market={m}
-              settings={maps[m.id] ?? { center: null, aspect: 'landscape' }}
+              settings={maps[m.id] ?? { center: null, zoom: null, aspect: 'landscape' }}
               onChanged={refresh}
             />
           ))}

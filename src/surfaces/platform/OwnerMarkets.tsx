@@ -184,7 +184,9 @@ function MarketConfigCard({
             Drag the 📍 onto your market (or click the map), then <strong>Save market</strong>. This locks
             where the stall map opens — the Market Admin can’t move it.
           </p>
-          <LocationPicker value={center} aspect={aspect} onChange={setCenter} />
+          {/* key on aspect → recreate the map in the correctly-sized container
+              (re-inits from `center`, so the chosen location is preserved). */}
+          <LocationPicker key={aspect} value={center} aspect={aspect} onChange={setCenter} />
           <p className="mt-1 text-[11px] text-brand-muted">
             {center[0].toFixed(5)}, {center[1].toFixed(5)} · {aspect}
           </p>

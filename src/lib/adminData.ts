@@ -129,6 +129,21 @@ export async function copyAssignments(fromDateId: string, toDateId: string): Pro
   return error?.message ?? null;
 }
 
+// ── Market dates ──
+/** Add a day to a market's calendar (admin-writable). Returns the new row id. */
+export async function addMarketDate(
+  marketId: string,
+  date: string,
+  label: string | null = null,
+): Promise<{ id: string | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('market_dates')
+    .insert({ market_id: marketId, date, label })
+    .select('id')
+    .single();
+  return { id: (data as { id: string } | null)?.id ?? null, error: error?.message ?? null };
+}
+
 // ── Season import/export ──
 export interface ScheduleExportRow {
   date: string;

@@ -9,6 +9,7 @@ import {
   setStalls,
   addVendorToDay,
   addVendorToDayWithStall,
+  addMarketDate,
   removeFromDay,
   copyAssignments,
 } from '@/lib/adminData';
@@ -46,7 +47,7 @@ function todayISO(): string {
 }
 
 export function AdminStalls() {
-  const { data: dates } = useAsync(fetchMarketDates, [], []);
+  const { data: dates, reload: reloadDates } = useAsync(fetchMarketDates, [], []);
   const { data: allVendors } = useAsync(fetchAllVendors, [], []);
   const { data: demoMarket } = useAsync(fetchActiveMarket, [], null);
   const demoMarketId = demoMarket?.id ?? null;
@@ -85,6 +86,8 @@ export function AdminStalls() {
   const [fillTab, setFillTab] = useState<'category' | 'auto'>('category');
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [addingDay, setAddingDay] = useState(false);
+  const [newDay, setNewDay] = useState('');
   const [mapView, setMapView] = useState<'grid' | 'satellite'>('grid');
   const [editingLayout, setEditingLayout] = useState(false);
   const [editingGridStalls, setEditingGridStalls] = useState(false);
@@ -215,6 +218,22 @@ export function AdminStalls() {
     });
   }
 
+  async function addDay() {
+    if (!currentMarketId || !newDay) return;
+    setBusy(true);
+    setHint(null);
+    const { id, error } = await addMarketDate(currentMarketId, newDay);
+    setBusy(false);
+    if (error) {
+      setHint(error);
+      return;
+    }
+    setNewDay('');
+    setAddingDay(false);
+    reloadDates();
+    if (id) setPicked(id);
+  }
+
   async function clickCell(label: string) {
     if (!selectedRow) {
       setHint('Pick a vendor on the right first, then click stalls to place them.');
@@ -309,36 +328,60 @@ export function AdminStalls() {
         <div className="flex items-end gap-3">
           <div>
             <span className="field-label">Market day</span>
-            <div className="mt-1 flex items-stretch gap-1">
-              <button
-                type="button"
-                className="btn-outline px-2.5 disabled:opacity-40"
-                onClick={() => stepWeek(-1)}
-                disabled={!canPrev}
-                title="Previous market day (A)"
-                aria-label="Previous market day"
-              >
-                ◀
-              </button>
-              <select className="field-input" value={dateId} onChange={(e) => goToDate(e.target.value)}>
-                {upcomingDates.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.markets?.name} · {formatDate(d.date)}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="btn-outline px-2.5 disabled:opacity-40"
-                onClick={() => stepWeek(1)}
-                disabled={!canNext}
-                title="Next market day (D)"
-                aria-label="Next market day"
-              >
-                ▶
-              </button>
-            </div>
-            <p className="mt-1 text-[11px] text-brand-muted">Keys: A ◀ prev · D ▶ next</p>
+            {upcomingDates.length === 0 ? (
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-sm text-brand-muted">No upcoming market days</span>
+                <button
+                  type="button"
+                  className="btn-outline px-3 py-1.5 text-sm"
+                  onClick={() => setAddingDay(true)}
+                >
+                  ＋ Add market day
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mt-1 flex items-stretch gap-1">
+                  <button
+                    type="button"
+                    className="btn-outline px-2.5 disabled:opacity-40"
+                    onClick={() => stepWeek(-1)}
+                    disabled={!canPrev}
+                    title="Previous market day (A)"
+                    aria-label="Previous market day"
+                  >
+                    ◀
+                  </button>
+                  <select className="field-input" value={dateId} onChange={(e) => goToDate(e.target.value)}>
+                    {upcomingDates.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.markets?.name} · {formatDate(d.date)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-outline px-2.5 disabled:opacity-40"
+                    onClick={() => stepWeek(1)}
+                    disabled={!canNext}
+                    title="Next market day (D)"
+                    aria-label="Next market day"
+                  >
+                    ▶
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-outline px-2.5 text-base leading-none"
+                    onClick={() => setAddingDay((v) => !v)}
+                    title="Add a market day"
+                    aria-label="Add a market day"
+                  >
+                    ＋
+                  </button>
+                </div>
+                <p className="mt-1 text-[11px] text-brand-muted">Keys: A ◀ prev · D ▶ next · ＋ add day</p>
+              </>
+            )}
           </div>
           <CsvToolbar
             onSample={() => downloadCSV('stall-assignments-sample.csv', toCSV(CSV_SAMPLE))}
@@ -347,6 +390,37 @@ export function AdminStalls() {
           />
         </div>
       </div>
+
+      {addingDay && currentMarketId && (
+        <div className="card flex flex-wrap items-end gap-3 p-4">
+          <div>
+            <span className="field-label">New market day</span>
+            <input
+              type="date"
+              className="field-input mt-1"
+              value={newDay}
+              min={today}
+              onChange={(e) => setNewDay(e.target.value)}
+            />
+          </div>
+          <button className="btn-primary" onClick={addDay} disabled={busy || !newDay}>
+            {busy ? 'Adding…' : 'Add day'}
+          </button>
+          <button
+            className="btn-ghost"
+            onClick={() => {
+              setAddingDay(false);
+              setNewDay('');
+            }}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+          <p className="text-xs text-brand-muted">
+            Adds a market day to {demoMarket?.name ?? 'this market'}’s calendar.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <button

@@ -1,12 +1,17 @@
-import { fetchVendors, fetchActiveMarket, fetchCurrentOfferings, fetchUpcomingEvents, fetchFeaturedForWeek } from '@/lib/data';
+import { useState } from 'react';
+import {
+  fetchVendors,
+  fetchActiveMarket,
+  fetchCurrentOfferings,
+  fetchUpcomingEvents,
+  fetchFeaturedForWeek,
+  fetchFrontPageMarketDate,
+} from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
 import { useTheme } from '@/theme/ThemeProvider';
 import { navigate } from '@/lib/router';
-import { eventCategoryEmoji, formatDate, thisSaturdayISO } from '@/lib/format';
+import { categoryEmoji, eventCategoryEmoji, thisSaturdayISO } from '@/lib/format';
 import { pickWeeklyFeatured } from '@/lib/featured';
-import { SeasonStrip } from './SeasonStrip';
-import { VendorCard } from './VendorCard';
-import { VisitPanel } from './VisitPanel';
 import { useVisitList } from '@/lib/visitList';
 import type { MarketEvent, Vendor, VendorOffering } from '@/lib/types';
 
@@ -15,156 +20,219 @@ function todayISO(): string {
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
 }
 
-const VALUE_PROPS = [
-  { icon: '🌎', title: 'Grown nearby', body: 'Everything here is raised or made within an hour’s drive.' },
-  { icon: '🤝', title: 'Meet the grower', body: 'Buy straight from the family that planted it.' },
-  { icon: '⏱️', title: 'Peak freshness', body: 'Most of it was picked the morning of the market.' },
+function formatNextDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric',
+  });
+}
+
+const FALLBACK_HERO = 'https://images.unsplash.com/uxJ1Sb0nwYw?auto=format&fit=crop&w=900&q=80';
+
+const WHY_LODESTONE = [
+  { icon: '👥', title: 'Vendor Updates',  old: 'Texts, emails, spreadsheets',     next: 'Vendors self-update in real time' },
+  { icon: '🗺️', title: 'Market Map',      old: 'Static PDFs and printed sheets',  next: 'Live map everyone can access' },
+  { icon: '📣', title: 'Announcements',   old: 'Social media only',               next: 'Website, email, and vendor feed' },
+  { icon: '📋', title: 'Applications',    old: 'Forms scattered everywhere',      next: 'One intake workflow for all vendors' },
+  { icon: '💬', title: 'Communication',   old: 'Repeated DMs & phone calls',      next: 'One hub for info & updates' },
 ];
+
+const MAP_ROWS = ['A', 'B', 'C', 'D'];
+const MAP_COLS = 6;
 
 export function PublicHome() {
   const { tenant } = useTheme();
   const visit = useVisitList();
-  const { data: vendors } = useAsync(fetchVendors, [], []);
-  const { data: nextMarket } = useAsync(fetchActiveMarket, [], null);
-  const reference = thisSaturdayISO();
-  const { data: fresh } = useAsync(() => fetchCurrentOfferings(reference), [], []);
-  const { data: events } = useAsync<MarketEvent[]>(() => fetchUpcomingEvents(todayISO()), [], []);
-  const { data: scheduledFeatured } = useAsync<Vendor[]>(() => fetchFeaturedForWeek(reference), [], []);
-  // Scheduled spotlight wins for the week; otherwise auto-rotate the starred pool.
-  const featured = scheduledFeatured.length ? scheduledFeatured : pickWeeklyFeatured(vendors.filter((v) => v.featured));
-  const upcomingEvents = events.slice(0, 3);
+  const [vendorQuery, setVendorQuery] = useState('');
+
+  const { data: vendors }          = useAsync(fetchVendors, [], []);
+  const { data: nextMarket }       = useAsync(fetchActiveMarket, [], null);
+  const reference                  = thisSaturdayISO();
+  const { data: frontPage }        = useAsync(() => fetchFrontPageMarketDate(todayISO()), [], null);
+  const { data: fresh }            = useAsync(() => fetchCurrentOfferings(reference), [], []);
+  const { data: events }           = useAsync<MarketEvent[]>(() => fetchUpcomingEvents(todayISO()), [], []);
+  const { data: scheduledFeatured }= useAsync<Vendor[]>(() => fetchFeaturedForWeek(reference), [], []);
+
+  const featured = scheduledFeatured.length
+    ? scheduledFeatured
+    : pickWeeklyFeatured(vendors.filter((v) => v.featured));
+
+  const filteredFeatured = vendorQuery.trim()
+    ? vendors
+        .filter((v) =>
+          `${v.name} ${v.category} ${v.tagline ?? ''}`.toLowerCase().includes(vendorQuery.toLowerCase()),
+        )
+        .slice(0, 6)
+    : featured.slice(0, 6);
 
   type FreshItem = { o: VendorOffering; vendor: Vendor };
   const freshItems: FreshItem[] = fresh
     .map((o) => ({ o, vendor: vendors.find((v) => v.id === o.vendor_id) }))
-    .filter((x): x is FreshItem => Boolean(x.vendor))
-    .slice(0, 6);
+    .filter((x): x is FreshItem => Boolean(x.vendor));
+
+  const freshTags = freshItems.flatMap((fi) => fi.o.items).slice(0, 8);
+  const upcomingEvents = (events as MarketEvent[]).slice(0, 2);
+  const heroImg = tenant.banner_url || FALLBACK_HERO;
+  const marketFirstWord = tenant.name?.split(' ')[0] ?? 'Riverbend';
+  const nextDateLabel = frontPage?.dateISO ? formatNextDate(frontPage.dateISO) : null;
 
   return (
     <div>
-      {/* Hero — admin's banner photo when set, otherwise the brand gradient. */}
-      <section
-        className={`relative overflow-hidden border-b border-brand-line ${
-          tenant.banner_url ? 'bg-brand-ink' : 'bg-gradient-to-b from-brand-primary/8 to-brand-paper'
-        }`}
-      >
-        {tenant.banner_url && (
-          <>
-            <img src={tenant.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/45 to-black/25" />
-          </>
-        )}
-        <div className={`relative mx-auto max-w-content px-4 py-16 sm:py-20 ${tenant.banner_url ? 'text-white' : ''}`}>
-          <p className={tenant.banner_url ? 'eyebrow text-white/80' : 'eyebrow'}>
-            {tenant.region ?? 'Your local market'}
-          </p>
-          <h1 className="mt-2 max-w-3xl text-4xl leading-tight sm:text-5xl">
-            {tenant.tagline ?? 'Fresh from the field, every week.'}
-          </h1>
-          <p className={`mt-4 max-w-xl text-lg ${tenant.banner_url ? 'text-white/90' : 'text-brand-muted'}`}>
-            Meet the farmers, bakers, and makers behind {tenant.name}. See what’s in season, then come
-            say hello.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <button onClick={() => navigate('/vendors')} className="btn-primary">
-              Meet the vendors
-            </button>
-            <button
-              onClick={() => navigate('/markets')}
-              className={tenant.banner_url ? 'btn-outline border-white/70 text-white hover:bg-white/10' : 'btn-outline'}
-            >
-              Plan your visit
-            </button>
-          </div>
-          {nextMarket && (
-            <p className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-card px-3 py-1.5 text-sm text-brand-ink shadow-card">
-              <span className="h-2 w-2 rounded-full bg-status-ok" />
-              Next up: <span className="font-semibold">{nextMarket.name}</span> ·{' '}
-              {nextMarket.day_of_week} {nextMarket.hours}
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* What's in season */}
-      <section className="mx-auto max-w-content px-4 py-12">
-        <div className="mb-5 flex items-end justify-between">
+      {/* ── Split hero ── */}
+      <section className="border-b border-brand-line bg-gradient-to-br from-brand-primary/6 via-brand-paper to-brand-card">
+        <div className="mx-auto grid max-w-content items-center gap-8 px-4 py-12 sm:py-16 lg:grid-cols-2">
           <div>
-            <p className="eyebrow">This week</p>
-            <h2 className="text-2xl">What’s at the market</h2>
+            <p className="eyebrow">📍 {tenant.region ?? 'Your local market'}</p>
+            <h1 className="mt-2 text-4xl font-bold leading-tight sm:text-5xl">
+              A living digital hub<br />for local markets.
+            </h1>
+            <p className="mt-4 max-w-xl text-lg text-brand-muted">
+              Vendors, weekly updates, events, and community connection — all in one place.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <button onClick={() => navigate('/vendors')} className="btn-primary">
+                This Week at {marketFirstWord}
+              </button>
+              <button onClick={() => navigate('/markets')} className="btn-outline">
+                Explore the Demo
+              </button>
+            </div>
+            <p className="mt-6 text-sm text-brand-muted">
+              Supporting local food. Strengthening community.
+            </p>
+          </div>
+          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-lift lg:aspect-auto lg:h-[400px]">
+            <img src={heroImg} alt="Market produce" className="h-full w-full object-cover" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/20 to-transparent" />
           </div>
         </div>
-        <SeasonStrip />
-      </section>
 
-      {/* Visit list — the shopper's tapped vendors + a highlighted site map. */}
-      <section className="mx-auto max-w-content px-4 pb-8">
-        <VisitPanel />
-      </section>
-
-      {/* Fresh this Saturday — vendors' own weekly posts, auto-selected by date.
-          Each card is backed by that vendor's own cover photo at low opacity. */}
-      {freshItems.length > 0 && (
-        <section className="mx-auto max-w-content px-4 pb-4">
-          <div className="mb-5">
-            <p className="eyebrow">Fresh this Saturday · {formatDate(reference)}</p>
-            <h2 className="text-2xl">What vendors are bringing</h2>
+        {/* Next market date bar */}
+        {nextDateLabel && nextMarket && (
+          <div className="border-t border-brand-line bg-brand-primary-dark">
+            <div className="mx-auto flex max-w-content items-center gap-3 px-4 py-3 text-sm text-white">
+              <span className="text-xl">📅</span>
+              <span>
+                <span className="font-semibold">Next Market: {nextDateLabel}</span>
+                {nextMarket.hours && (
+                  <span className="ml-2 text-white/75">{nextMarket.hours}</span>
+                )}
+                <span className="ml-2 text-white/50">· {nextMarket.name}</span>
+              </span>
+            </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {freshItems.map(({ o, vendor }) => {
-              const added = visit.has(vendor.slug);
+        )}
+      </section>
+
+      {/* ── Three-column content hub ── */}
+      <section className="mx-auto grid max-w-content gap-6 px-4 py-10 lg:grid-cols-[220px_1fr_220px]">
+
+        {/* Col 1: This Week */}
+        <div className="card p-5">
+          <h2 className="font-semibold text-brand-primary-dark">This Week at {marketFirstWord}</h2>
+          <div className="mt-4 space-y-4 divide-y divide-brand-line text-sm">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 text-xl">👥</span>
+              <div>
+                <p className="font-semibold text-brand-primary-dark">{vendors.length} vendors confirmed</p>
+                <button
+                  onClick={() => navigate('/vendors')}
+                  className="text-xs text-brand-primary hover:underline"
+                >
+                  View the full vendor list →
+                </button>
+              </div>
+            </div>
+            {upcomingEvents.map((e) => (
+              <div key={e.id} className="flex items-start gap-3 pt-4">
+                <span className="mt-0.5 text-xl">{eventCategoryEmoji(e.category)}</span>
+                <div>
+                  <p className="font-semibold text-brand-primary-dark">{e.title}</p>
+                  {e.description && (
+                    <p className="line-clamp-2 text-xs text-brand-muted">{e.description}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+            {freshTags.length > 0 && (
+              <div className="flex items-start gap-3 pt-4">
+                <span className="mt-0.5 text-xl">🌿</span>
+                <div>
+                  <p className="font-semibold text-brand-primary-dark">Fresh picks this week</p>
+                  <p className="line-clamp-2 text-xs text-brand-muted">
+                    {freshTags.join(', ')}{freshItems.length > 4 ? ', and more' : ''}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => navigate('/markets')}
+            className="btn-outline mt-5 w-full text-sm"
+          >
+            View Full Schedule
+          </button>
+        </div>
+
+        {/* Col 2: Featured Vendors */}
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-semibold text-brand-primary-dark">Featured Vendors</h2>
+            <button onClick={() => navigate('/vendors')} className="btn-ghost text-sm">
+              Browse all vendors →
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {filteredFeatured.map((v) => {
+              const added = visit.has(v.slug);
               return (
                 <div
-                  key={o.id}
+                  key={v.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => visit.toggle(vendor.slug)}
+                  onClick={() => visit.toggle(v.slug)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      visit.toggle(vendor.slug);
+                      visit.toggle(v.slug);
                     }
                   }}
                   aria-pressed={added}
-                  title={added ? `Remove ${vendor.name} from your visit list` : `Add ${vendor.name} to your visit list`}
-                  className={`group relative cursor-pointer overflow-hidden rounded-2xl border border-brand-line bg-brand-card p-4 text-left shadow-card transition hover:shadow-lift ${
-                    added ? 'ring-2 ring-brand-primary' : ''
-                  }`}
+                  className={`card group cursor-pointer overflow-hidden transition hover:shadow-lift ${added ? 'ring-2 ring-brand-primary' : ''}`}
                 >
-                  {vendor.image_url && (
-                    <>
-                      <img src={vendor.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                      {/* slight transparency: soften the vendor's photo so the text stays readable */}
-                      <div className="absolute inset-0 bg-brand-card/80" />
-                    </>
-                  )}
-                  <div className="relative">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-semibold text-brand-primary-dark">{vendor.name}</p>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold transition ${
-                          added
-                            ? 'bg-brand-primary text-white'
-                            : 'bg-brand-primary/10 text-brand-primary-dark opacity-0 group-hover:opacity-100'
-                        }`}
-                      >
-                        {added ? '✓ On list' : '+ Visit'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-brand-ink">{o.headline ?? 'Bringing this week'}</p>
-                    {o.items.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {o.items.slice(0, 5).map((it) => (
-                          <span key={it} className="chip">{it}</span>
-                        ))}
+                  <div className="relative aspect-square overflow-hidden bg-brand-paper">
+                    {v.image_url ? (
+                      <img
+                        src={v.image_url}
+                        alt=""
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-4xl">
+                        {categoryEmoji(v.category)}
                       </div>
                     )}
+                    {v.logo_url && (
+                      <div className="absolute bottom-1.5 left-1.5 h-8 w-8 overflow-hidden rounded-md border border-white/80 bg-white shadow">
+                        <img src={v.logo_url} alt="" className="h-full w-full object-contain p-0.5" />
+                      </div>
+                    )}
+                    <span
+                      className={`absolute right-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold transition ${
+                        added ? 'bg-brand-primary text-white' : 'bg-white/85 text-brand-ink/70 opacity-0 group-hover:opacity-100'
+                      }`}
+                    >
+                      {added ? '✓' : '+'}
+                    </span>
+                  </div>
+                  <div className="p-2.5">
+                    <p className="text-sm font-semibold leading-tight text-brand-primary-dark">{v.name}</p>
+                    {v.tagline && (
+                      <p className="mt-0.5 line-clamp-1 text-xs text-brand-muted">{v.tagline}</p>
+                    )}
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/vendor/${vendor.slug}`);
-                      }}
-                      className="mt-3 text-xs font-semibold text-brand-primary-dark hover:underline"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/vendor/${v.slug}`); }}
+                      className="mt-1 text-[11px] font-semibold text-brand-primary hover:underline"
                     >
                       View →
                     </button>
@@ -173,74 +241,158 @@ export function PublicHome() {
               );
             })}
           </div>
-        </section>
-      )}
+          <div className="mt-4 flex gap-2">
+            <input
+              type="search"
+              placeholder="Search vendors…"
+              value={vendorQuery}
+              onChange={(e) => setVendorQuery(e.target.value)}
+              className="min-w-0 flex-1 rounded-lg border border-brand-line bg-brand-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+            />
+            <button onClick={() => navigate('/vendors')} className="btn-outline shrink-0 text-sm">
+              All vendors
+            </button>
+          </div>
+        </div>
 
-      {/* Value props */}
-      <section className="bg-brand-card">
-        <div className="mx-auto grid max-w-content gap-6 px-4 py-12 sm:grid-cols-3">
-          {VALUE_PROPS.map((v) => (
-            <div key={v.title}>
-              <div className="text-3xl">{v.icon}</div>
-              <h3 className="mt-2 text-lg">{v.title}</h3>
-              <p className="mt-1 text-sm text-brand-muted">{v.body}</p>
+        {/* Col 3: Market Map preview */}
+        <div className="card p-5">
+          <h2 className="font-semibold text-brand-primary-dark">Market Map</h2>
+          <div className="mt-3 overflow-hidden rounded-lg border border-brand-line bg-brand-paper p-2">
+            <div
+              className="grid gap-0.5"
+              style={{ gridTemplateColumns: `repeat(${MAP_COLS}, 1fr)` }}
+            >
+              {MAP_ROWS.flatMap((row) =>
+                Array.from({ length: MAP_COLS }, (_, i) => {
+                  const stall = `${row}${i + 1}`;
+                  return (
+                    <div
+                      key={stall}
+                      className="flex aspect-square items-center justify-center rounded bg-brand-primary/10 text-[8px] font-semibold text-brand-primary-dark"
+                    >
+                      {stall}
+                    </div>
+                  );
+                }),
+              )}
+            </div>
+          </div>
+          <div className="mt-3 space-y-1.5">
+            {[
+              { emoji: 'ℹ️', label: 'Info Booth' },
+              { emoji: '🚻', label: 'Restrooms' },
+              { emoji: '🍽️', label: 'Food Area' },
+              { emoji: '🎵', label: 'Live Music' },
+              { emoji: '💳', label: 'SNAP/EBT' },
+              { emoji: '🅿️', label: 'Parking' },
+            ].map((l) => (
+              <div key={l.label} className="flex items-center gap-2 text-xs text-brand-ink">
+                <span>{l.emoji}</span>
+                <span>{l.label}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => navigate('/markets')}
+            className="btn-outline mt-4 w-full text-sm"
+          >
+            View full map →
+          </button>
+        </div>
+      </section>
+
+      {/* ── For Vendors / For Organizers ── */}
+      <section className="border-y border-brand-line bg-brand-card">
+        <div className="mx-auto grid max-w-content gap-6 px-4 py-12 sm:grid-cols-2">
+          <div className="rounded-2xl border border-brand-line bg-brand-paper p-6">
+            <h2 className="text-xl font-semibold text-brand-primary-dark">For Vendors</h2>
+            <p className="mt-1 text-sm text-brand-muted">Everything you need to manage your participation.</p>
+            <ul className="mt-5 space-y-2.5">
+              {[
+                'Update your products & photos',
+                'Confirm attendance each week',
+                'View booth assignment & map',
+                'Connect with market staff',
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-sm text-brand-ink">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand-primary text-[10px] font-bold text-white">
+                    ✓
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button onClick={() => navigate('/apply')} className="btn-primary text-sm">
+                Vendor Login
+              </button>
+              <button onClick={() => navigate('/apply')} className="btn-outline text-sm">
+                Apply to Be a Vendor
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-6">
+            <h2 className="text-xl font-semibold text-brand-primary-dark">For Organizers</h2>
+            <p className="mt-1 text-sm text-brand-muted">Run your market, not spreadsheets.</p>
+            <ul className="mt-5 space-y-2.5">
+              {[
+                'Vendor management & applications',
+                'Booth map & assignments',
+                'Announcements & alerts',
+                'Reports, analytics & more',
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-sm text-brand-ink">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand-primary text-[10px] font-bold text-white">
+                    ✓
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button onClick={() => navigate('/markets')} className="btn-primary text-sm">
+                Organizer Login
+              </button>
+              <button onClick={() => navigate('/vendors')} className="btn-outline text-sm">
+                See Platform Demo
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Why Lodestone ── */}
+      <section className="mx-auto max-w-content px-4 py-14">
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-6">
+          <div>
+            <h2 className="text-2xl font-semibold text-brand-primary-dark">
+              Why Lodestone for Farmers Markets?
+            </h2>
+            <p className="mt-1 text-brand-muted">Replace scattered tools with one connected platform.</p>
+          </div>
+          <div className="max-w-xs rounded-xl border border-brand-line bg-brand-card p-4 text-sm">
+            <p className="font-semibold text-brand-ink">Demo Mode</p>
+            <p className="mt-1 text-xs text-brand-muted">
+              This is a fictional farmers market website showing how Lodestone can power a local market
+              website, vendor directory, weekly updates, and organizer workflows.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {WHY_LODESTONE.map((w) => (
+            <div key={w.title} className="rounded-xl border border-brand-line bg-brand-card p-4">
+              <div className="text-2xl">{w.icon}</div>
+              <p className="mt-2 text-sm font-semibold text-brand-primary-dark">{w.title}</p>
+              <p className="mt-1 text-xs text-brand-muted line-through opacity-60">{w.old}</p>
+              <p className="mt-1 text-xs font-medium text-brand-ink">
+                <span className="text-brand-primary">Lodestone:</span> {w.next}
+              </p>
             </div>
           ))}
         </div>
       </section>
-
-      {/* Featured vendors */}
-      {featured.length > 0 && (
-        <section className="mx-auto max-w-content px-4 py-12">
-          <div className="mb-5 flex items-end justify-between">
-            <div>
-              <p className="eyebrow">Spotlight this week</p>
-              <h2 className="text-2xl">Featured this week</h2>
-            </div>
-            <button onClick={() => navigate('/vendors')} className="btn-ghost">
-              See all vendors →
-            </button>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((v) => (
-              <VendorCard key={v.id} vendor={v} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Upcoming events teaser → full Events page */}
-      {upcomingEvents.length > 0 && (
-        <section className="bg-brand-card">
-          <div className="mx-auto max-w-content px-4 py-12">
-            <div className="mb-5 flex items-end justify-between">
-              <div>
-                <p className="eyebrow">Learning takes root</p>
-                <h2 className="text-2xl">Upcoming events</h2>
-              </div>
-              <button onClick={() => navigate('/events')} className="btn-ghost">All events →</button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {upcomingEvents.map((e) => (
-                <button
-                  key={e.id}
-                  onClick={() => navigate('/events')}
-                  className="card p-4 text-left transition hover:shadow-lift"
-                >
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <span className="font-semibold text-brand-accent">{formatDate(e.date)}</span>
-                    <span className="chip">
-                      {eventCategoryEmoji(e.category)} {e.category ?? 'Event'}
-                    </span>
-                  </div>
-                  <p className="mt-2 font-semibold text-brand-primary-dark">{e.title}</p>
-                  {e.description && <p className="mt-1 line-clamp-2 text-sm text-brand-muted">{e.description}</p>}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
     </div>
   );
 }

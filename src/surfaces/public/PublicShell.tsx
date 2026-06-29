@@ -12,11 +12,11 @@ import { EventsPage } from './EventsPage';
 import { AnnouncementBanner } from './AnnouncementBanner';
 
 const NAV = [
-  { to: '/', label: 'Home' },
+  { to: '/', label: 'This Week' },
   { to: '/vendors', label: 'Vendors' },
+  { to: '/markets', label: 'Map' },
   { to: '/events', label: 'Events' },
-  { to: '/markets', label: 'Visit' },
-  { to: '/apply', label: 'Sell with us' },
+  { to: '/apply', label: 'For Vendors' },
 ];
 
 const HOME_VARIANT_KEY = 'rbm.homeVariant';
@@ -93,6 +93,12 @@ export function PublicShell() {
                 {n.label}
               </button>
             ))}
+            <button
+              onClick={() => go('/apply')}
+              className="ml-2 rounded-full bg-brand-primary px-3.5 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-primary-dark"
+            >
+              Vendor Login
+            </button>
           </div>
         </div>
       </nav>
@@ -111,8 +117,16 @@ export function PublicShell() {
         </button>
       )}
 
-      <footer className="mt-16 border-t border-brand-line bg-brand-card">
-        <div className="mx-auto flex max-w-content flex-col gap-2 px-4 py-8 text-sm text-brand-muted sm:flex-row sm:items-center sm:justify-between">
+      <footer className="mt-16 border-t border-brand-line bg-brand-card pb-20">
+        {/* Market info strip */}
+        <div className="border-b border-brand-line bg-brand-paper">
+          <div className="mx-auto flex max-w-content flex-wrap items-center justify-center gap-x-8 gap-y-2 px-4 py-3 text-xs text-brand-muted">
+            <span>🏛️ Managed by Riverbend Market Association</span>
+            <span>💳 SNAP/EBT Accepted</span>
+            <span>☔ Rain or shine unless posted</span>
+          </div>
+        </div>
+        <div className="mx-auto flex max-w-content flex-col gap-2 px-4 py-6 text-sm text-brand-muted sm:flex-row sm:items-center sm:justify-between">
           <span>
             {tenant.name}
             {tenant.region ? ` · ${tenant.region}` : ''}
@@ -123,6 +137,23 @@ export function PublicShell() {
           </span>
         </div>
       </footer>
+
+      {/* Sticky bottom CTA — visible on home page only */}
+      {path === '/' && (
+        <div className="fixed bottom-0 inset-x-0 z-30 border-t border-brand-line bg-brand-primary-dark text-white shadow-lift">
+          <div className="mx-auto flex max-w-content items-center justify-between gap-4 px-4 py-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">See how Lodestone can help your market thrive.</p>
+              <p className="hidden truncate text-xs text-white/70 sm:block">
+                Book a personalized demo for your team.
+              </p>
+            </div>
+            <button className="shrink-0 rounded-full bg-brand-accent px-4 py-2 text-sm font-bold text-brand-ink transition hover:opacity-90">
+              Book a Demo
+            </button>
+          </div>
+        </div>
+      )}
       </div>
     </VisitListProvider>
   );

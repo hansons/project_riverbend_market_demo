@@ -32,6 +32,11 @@ export async function setVendorFeatured(id: string, featured: boolean): Promise<
   return error?.message ?? null;
 }
 
+export async function updateVendorMarkets(id: string, marketIds: string[]): Promise<string | null> {
+  const { error } = await supabase.from('vendors').update({ market_ids: marketIds }).eq('id', id);
+  return error?.message ?? null;
+}
+
 // ── Administrators (read-only list; provisioning not yet wired) ──
 export async function fetchAdmins(): Promise<Profile[]> {
   const { data } = await supabase

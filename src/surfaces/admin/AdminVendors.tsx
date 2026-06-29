@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { fetchAllVendors, setVendorStatus } from '@/lib/adminData';
+import { fetchAllVendors, setVendorStatus, updateVendorMarkets } from '@/lib/adminData';
+import { fetchMarkets } from '@/lib/data';
 import { useAsync } from '@/lib/useAsync';
 import { useHotkey } from '@/lib/useKeyNav';
 import { notifyVendorApproved } from '@/lib/push';
@@ -7,16 +8,41 @@ import { categoryEmoji, vendorStatusStyle } from '@/lib/format';
 import { VendorManagersPanel } from './VendorManagersPanel';
 import type { VendorStatus } from '@/lib/types';
 
+// Stable seeded UUIDs for the two primary markets.
+const SUMMER_MARKET_ID = '22220000-0000-4000-8000-000000000001'; // Saturday / Riverfront
+const WINTER_MARKET_ID = '22220000-0000-4000-8000-000000000003'; // Indoor Winter
+
 const FILTERS: (VendorStatus | 'all')[] = ['all', 'active', 'pending', 'suspended'];
 
 export function AdminVendors() {
   const { data: vendors, loading, reload } = useAsync(fetchAllVendors, [], []);
+  const { data: markets } = useAsync(fetchMarkets, [], []);
   const [filter, setFilter] = useState<VendorStatus | 'all'>('all');
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   useHotkey(['/'], () => searchRef.current?.focus()); // "/" jumps to search
   const [openManagers, setOpenManagers] = useState<string | null>(null);
+
+  // Show Summer/Winter eligibility only when both markets exist in the DB.
+  const hasSummer = markets.some((m) => m.id === SUMMER_MARKET_ID);
+  const hasWinter = markets.some((m) => m.id === WINTER_MARKET_ID);
+  const showEligibility = hasSummer && hasWinter;
+
+  type EligibilityMode = 'both' | 'summer' | 'winter';
+  function eligibilityMode(marketIds: string[]): EligibilityMode {
+    if (marketIds.length === 0) return 'both';
+    if (marketIds.includes(SUMMER_MARKET_ID) && !marketIds.includes(WINTER_MARKET_ID)) return 'summer';
+    if (marketIds.includes(WINTER_MARKET_ID) && !marketIds.includes(SUMMER_MARKET_ID)) return 'winter';
+    return 'both';
+  }
+  async function setMarkets(id: string, mode: EligibilityMode) {
+    setBusy(id);
+    const ids = mode === 'both' ? [] : mode === 'summer' ? [SUMMER_MARKET_ID] : [WINTER_MARKET_ID];
+    await updateVendorMarkets(id, ids);
+    setBusy(null);
+    reload();
+  }
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: vendors.length };
@@ -83,6 +109,29 @@ export function AdminVendors() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${style.className}`}>{style.label}</span>
+                    {showEligibility && v.status === 'active' && (
+                      <span className="inline-flex items-center gap-0.5 rounded-lg border border-brand-line p-0.5">
+                        {(['both', 'summer', 'winter'] as const).map((mode) => {
+                          const active = eligibilityMode(v.market_ids) === mode;
+                          return (
+                            <button
+                              key={mode}
+                              onClick={() => setMarkets(v.id, mode)}
+                              disabled={busy === v.id}
+                              title={mode === 'both' ? 'All markets' : mode === 'summer' ? 'Summer / Riverfront only' : 'Indoor Winter only'}
+                              className={[
+                                'rounded-md px-2 py-0.5 text-xs font-medium transition',
+                                active
+                                  ? 'bg-brand-primary text-white'
+                                  : 'text-brand-ink/60 hover:bg-brand-paper',
+                              ].join(' ')}
+                            >
+                              {mode === 'both' ? 'Both' : mode === 'summer' ? 'Summer' : 'Winter'}
+                            </button>
+                          );
+                        })}
+                      </span>
+                    )}
                     {v.status === 'active' && (
                       <button
                         onClick={() => setOpenManagers((cur) => (cur === v.id ? null : v.id))}

@@ -44,7 +44,7 @@ begin
     ('22220000-0000-4000-8000-000000000002', 'Midweek Market', 'Wednesday', 'June – September', '3pm – 7pm',
      'Maple Square, downtown', 'A smaller after-work market for fresh dinner picks.', 2),
     ('22220000-0000-4000-8000-000000000003', 'Corvallis Indoor Winter Market', 'Saturday', 'January – April', '9am – 1pm',
-     'Guerber Hall, Benton County Fairgrounds — 110 SW 53rd St, Corvallis', 'Indoor cool-season produce, baked goods, and crafts.', 0);  -- sort 0 = flagship (demo currently switched to Winter; set back to 3 to revert)
+     'Guerber Hall, Benton County Fairgrounds — 110 SW 53rd St, Corvallis', 'Indoor cool-season produce, baked goods, and crafts.', 3);
 
   insert into vendors (id, slug, name, category, tagline, story, town, practices, market_days, image_url, email, status, featured) values
     ('a0000000-0000-4000-8000-000000000001', 'fern-hollow-farm', 'Fern Hollow Farm', 'Produce',
@@ -195,116 +195,117 @@ begin
      'Heirloom tomatoes & peppers',
      'Hoop-house and field tomatoes in dozens of heirloom varieties, plus sweet and hot peppers, tomatillos, and basil by the armful.',
      'Monroe, OR', '{"No-spray","Heirloom"}', '{"Saturday"}',
-     'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/JrhGemTKaqc?auto=format&fit=crop&w=900&q=70',
      'vines@hazeldell.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000026', 'three-sisters-kombucha', 'Three Sisters Kombucha', 'Beverages',
      'Kombucha & ginger beer on tap',
      'Small-batch kombucha, switchel, and ginger beer brewed with local fruit and honey. Bring a growler for a refill.',
      'Corvallis, OR', '{"Small-batch","Local fruit"}', '{"Saturday","Wednesday"}',
-     'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/OhCiWCwiBkE?auto=format&fit=crop&w=900&q=70',
      'tap@threesisters.demo', 'active', true),
     ('a0000000-0000-4000-8000-000000000027', 'tangent-tofu', 'Tangent Tofu', 'Prepared Foods',
      'Fresh organic tofu & tempeh',
      'Block tofu, silken tofu, and tempeh pressed fresh each week from organic Oregon soybeans.',
      'Tangent, OR', '{"Certified Organic","Small-batch"}', '{"Saturday"}',
-     'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/vOHkbYVSTBY?auto=format&fit=crop&w=900&q=70',
      'hello@tangenttofu.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000028', 'calapooia-pasta', 'Calapooia Pasta', 'Prepared Foods',
      'Fresh egg pasta & ravioli',
      'Hand-rolled tagliatelle, pappardelle, and seasonal ravioli made with local eggs and stoneground flour.',
      'Albany, OR', '{"Small-batch","Local grain"}', '{"Saturday","Wednesday"}',
-     'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/Bk7kE4cArT4?auto=format&fit=crop&w=900&q=70',
      'ciao@calapooiapasta.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000029', 'marys-river-chocolates', 'Mary''s River Chocolates', 'Prepared Foods',
      'Bean-to-bar chocolate & truffles',
      'Single-origin chocolate roasted, ground, and tempered by hand. Truffles, sea-salt caramels, and drinking chocolate.',
      'Philomath, OR', '{"Bean-to-bar","Small-batch"}', '{"Saturday"}',
-     'https://images.unsplash.com/photo-1549931319-a545dcf3bc73?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/TzN2odwnesg?auto=format&fit=crop&w=900&q=70',
      'cocoa@marysriver.demo', 'active', true),
     ('a0000000-0000-4000-8000-000000000030', 'sundance-salsa', 'Sundance Salsa Co.', 'Honey & Preserves',
      'Roasted salsa & hot sauce',
      'Fire-roasted salsas and small-batch hot sauce built from the market''s own peppers and tomatoes.',
      'Independence, OR', '{"Small-batch","No preservatives"}', '{"Saturday","Wednesday"}',
-     'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/nI1PX_mQ95w?auto=format&fit=crop&w=900&q=70',
      'heat@sundancesalsa.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000031', 'willow-creek-lamb', 'Willow Creek Lamb', 'Meat & Eggs',
      'Grass-fed lamb & goat',
      'Pasture-raised lamb and goat moved across hill pasture all season — chops, ground, shanks, and merguez sausage.',
      'Monroe, OR', '{"Grass-fed","Pasture-raised"}', '{"Saturday"}',
-     'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/Bt4D7rtaqMk?auto=format&fit=crop&w=900&q=70',
      'ranch@willowcreeklamb.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000032', 'calico-hen-farm', 'Calico Hen Farm', 'Meat & Eggs',
      'Pasture eggs & broth',
      'A small flock of heritage hens on open pasture — rich-yolk eggs, the odd dozen of quail eggs, and slow-simmered bone broth.',
      'Halsey, OR', '{"Pasture-raised","Soy-free"}', '{"Saturday","Wednesday"}',
-     'https://images.unsplash.com/photo-1612170153139-6f881ff067e0?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/BE3I4LJkUj4?auto=format&fit=crop&w=900&q=70',
      'cluck@calicohen.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000033', 'bramble-and-bloom', 'Bramble & Bloom', 'Flowers',
      'Field-grown seasonal bouquets',
      'A small flower farm growing peonies, sweet peas, dahlias, and zinnias for market bouquets and weekly subscriptions.',
      'Corvallis, OR', '{"No-spray","Field-grown"}', '{"Saturday","Wednesday"}',
-     'https://images.unsplash.com/photo-1469259943454-aa100abba749?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/ElxBX6bsAgQ?auto=format&fit=crop&w=900&q=70',
      'stems@brambleandbloom.demo', 'active', true),
     ('a0000000-0000-4000-8000-000000000034', 'filbert-hollow-nursery', 'Filbert Hollow Nursery', 'Herbs & Plants',
      'Native plants & veggie starts',
      'A peat-free nursery raising vegetable starts, culinary herbs, and Willamette Valley native plants for pollinator gardens.',
      'Philomath, OR', '{"Peat-free","Pesticide-free"}', '{"Saturday"}',
-     'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/u4W4sqjy4Nc?auto=format&fit=crop&w=900&q=70',
      'roots@filberthollow.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000035', 'steeping-room-tea', 'Steeping Room Tea', 'Coffee & Tea',
      'Herbal blends & matcha',
      'Hand-blended herbal tisanes, ceremonial matcha, and chai concentrate. Iced tea poured fresh at the stand.',
      'Corvallis, OR', '{"Small-batch","Organic"}', '{"Saturday","Wednesday"}',
-     'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/L82-kkEBOd0?auto=format&fit=crop&w=900&q=70',
      'steep@steepingroom.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000036', 'corvallis-crepe-co', 'Corvallis Crepe Co.', 'Prepared Foods',
      'Sweet & savory crepes',
      'Made-to-order crepes — ham and gruyère, market-berry, lemon-sugar — cooked on the griddle while you watch.',
      'Corvallis, OR', '{"Made-to-order","Local produce"}', '{"Saturday","Wednesday"}',
-     'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/DAWIsEOcyx0?auto=format&fit=crop&w=900&q=70',
      'bonjour@corvalliscrepe.demo', 'active', true),
     ('a0000000-0000-4000-8000-000000000037', 'honeycrisp-hill-orchard', 'Honeycrisp Hill Orchard', 'Orchard & Fruit',
      'Stone fruit & heirloom apples',
      'A hillside orchard growing peaches, apricots, plums, and dozens of heirloom apples with integrated pest management.',
      'Lebanon, OR', '{"IPM","Family orchard"}', '{"Saturday"}',
-     'https://images.unsplash.com/photo-1570913149827-d2ac84ab3f9a?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/GvqG5tKsPBE?auto=format&fit=crop&w=900&q=70',
      'fruit@honeycrisphill.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000038', 'edge-and-anvil-sharpening', 'Edge & Anvil Sharpening', 'Services',
      'Knife, scissor & tool sharpening',
      'A traveling sharpening booth — drop off your kitchen knives, garden tools, and scissors and pick them up razor-sharp before you head home.',
      'Corvallis, OR', '{"Walk-up","Same-day"}', '{"Saturday"}',
-     null,
+     'https://images.unsplash.com/BtHjHxh-D7I?auto=format&fit=crop&w=900&q=70',
      'sharpen@edgeandanvil.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000039', 'riverside-cyclery', 'Riverside Cyclery', 'Services',
      'Mobile bike tune-ups & repairs',
      'A pop-up bike shop fixing flats, dialing in brakes, and tuning gears while you shop. Rolling toolkit, no appointment needed.',
      'Corvallis, OR', '{"Walk-up","Mobile"}', '{"Saturday"}',
-     null,
+     'https://images.unsplash.com/n3GuddnJq-A?auto=format&fit=crop&w=900&q=70',
      'fix@riversidecyclery.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000040', 'stillwater-chair-massage', 'Stillwater Chair Massage', 'Services',
      'Seated chair massage',
      'Licensed massage therapists offering 10- to 30-minute seated sessions in the shade. Walk up or add your name to the clipboard.',
      'Albany, OR', '{"Licensed","Walk-up"}', '{"Saturday","Wednesday"}',
-     null,
+     'https://images.unsplash.com/XJptUS8nbhs?auto=format&fit=crop&w=900&q=70',
      'relax@stillwatermassage.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000041', 'kestrel-studio-prints', 'Kestrel Studio Prints', 'Art & Crafts',
      'Local art prints & cards',
      'Hand-pulled linocuts, watercolor prints, and greeting cards of Willamette Valley landscapes and farm life. Originals by commission.',
      'Philomath, OR', '{"Handmade","Original art"}', '{"Saturday"}',
-     null,
+     'https://images.unsplash.com/4vwv2cfpTg8?auto=format&fit=crop&w=900&q=70',
      'hello@kestrelstudio.demo', 'active', false),
     ('a0000000-0000-4000-8000-000000000042', 'cascade-tree-farm', 'Cascade Tree Farm', 'Trees & Nursery',
      'Fruit, shade & native trees',
      'Bare-root and potted fruit trees, natives, and shade trees raised at a family nursery — with planting advice included at the booth.',
      'Lebanon, OR', '{"Family-run","Peat-free"}', '{"Saturday"}',
-     null,
+     'https://images.unsplash.com/tiPQCmdALWs?auto=format&fit=crop&w=900&q=70',
      'trees@cascadetreefarm.demo', 'active', false)
   on conflict (id) do update set
     slug = excluded.slug, name = excluded.name, category = excluded.category,
     tagline = excluded.tagline, story = excluded.story, town = excluded.town,
     practices = excluded.practices, market_days = excluded.market_days,
     image_url = excluded.image_url, logo_url = excluded.logo_url,
-    email = excluded.email, status = excluded.status, featured = excluded.featured;
+    email = excluded.email, status = excluded.status, featured = excluded.featured,
+    market_ids = '{}';
 
   insert into vendor_products (vendor_id, name, category, unit, price_cents, in_season, sort) values
     ('a0000000-0000-4000-8000-000000000001', 'Sugar snap peas', 'Vegetable', 'lb', 600, true, 1),
@@ -682,6 +683,68 @@ begin
     ('a0000000-0000-4000-8000-000000000041', '33330000-0000-4000-8000-000000000002', 'confirmed', '{C4}', null),
     ('a0000000-0000-4000-8000-000000000042', '33330000-0000-4000-8000-000000000002', 'confirmed', '{D5}', null);
 
+  -- Complete the Jun 13 Saturday lineup: remaining active vendors not yet scheduled.
+  insert into vendor_schedule (vendor_id, market_date_id, status, stalls, note) values
+    ('a0000000-0000-4000-8000-000000000004', '33330000-0000-4000-8000-000000000001', 'confirmed', '{D1}',  null),
+    ('a0000000-0000-4000-8000-000000000007', '33330000-0000-4000-8000-000000000001', 'confirmed', '{D2}',  null),
+    ('a0000000-0000-4000-8000-000000000008', '33330000-0000-4000-8000-000000000001', 'confirmed', '{D6}',  null),
+    ('a0000000-0000-4000-8000-000000000010', '33330000-0000-4000-8000-000000000001', 'confirmed', '{A11}', null),
+    ('a0000000-0000-4000-8000-000000000011', '33330000-0000-4000-8000-000000000001', 'confirmed', '{A1}',  null),
+    ('a0000000-0000-4000-8000-000000000012', '33330000-0000-4000-8000-000000000001', 'confirmed', '{B3}',  null),
+    ('a0000000-0000-4000-8000-000000000014', '33330000-0000-4000-8000-000000000001', 'confirmed', '{D7}',  null),
+    ('a0000000-0000-4000-8000-000000000015', '33330000-0000-4000-8000-000000000001', 'confirmed', '{A12}', null),
+    ('a0000000-0000-4000-8000-000000000016', '33330000-0000-4000-8000-000000000001', 'confirmed', '{B4}',  null),
+    ('a0000000-0000-4000-8000-000000000017', '33330000-0000-4000-8000-000000000001', 'confirmed', '{C9}',  null),
+    ('a0000000-0000-4000-8000-000000000018', '33330000-0000-4000-8000-000000000001', 'confirmed', '{B5}',  null),
+    ('a0000000-0000-4000-8000-000000000019', '33330000-0000-4000-8000-000000000001', 'confirmed', '{C10}', null),
+    ('a0000000-0000-4000-8000-000000000020', '33330000-0000-4000-8000-000000000001', 'confirmed', '{B6}',  null)
+  on conflict (vendor_id, market_date_id) do nothing;
+
+  -- Copy the full Jun 13 Saturday lineup forward to the two upcoming Saturdays.
+  insert into vendor_schedule (vendor_id, market_date_id, status, stalls, note)
+  select vendor_id, '33330000-0000-4000-8000-000000000004', status, stalls, null
+  from vendor_schedule
+  where market_date_id = '33330000-0000-4000-8000-000000000001' and status = 'confirmed'
+  on conflict (vendor_id, market_date_id) do nothing;
+
+  insert into vendor_schedule (vendor_id, market_date_id, status, stalls, note)
+  select vendor_id, '33330000-0000-4000-8000-000000000005', status, stalls, null
+  from vendor_schedule
+  where market_date_id = '33330000-0000-4000-8000-000000000001' and status = 'confirmed'
+  on conflict (vendor_id, market_date_id) do nothing;
+
+  -- Midweek market: full Wednesday lineup for Jul 1, lighter for Jul 8.
+  insert into vendor_schedule (vendor_id, market_date_id, status, stalls, note) values
+    ('a0000000-0000-4000-8000-000000000001', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A1}',  null),
+    ('a0000000-0000-4000-8000-000000000005', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A2}',  null),
+    ('a0000000-0000-4000-8000-000000000008', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A3}',  null),
+    ('a0000000-0000-4000-8000-000000000009', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A4}',  null),
+    ('a0000000-0000-4000-8000-000000000011', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A5}',  null),
+    ('a0000000-0000-4000-8000-000000000014', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A6}',  null),
+    ('a0000000-0000-4000-8000-000000000015', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A7}',  null),
+    ('a0000000-0000-4000-8000-000000000016', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A8}',  null),
+    ('a0000000-0000-4000-8000-000000000019', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A9}',  null),
+    ('a0000000-0000-4000-8000-000000000024', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A10}', null),
+    ('a0000000-0000-4000-8000-000000000026', '33330000-0000-4000-8000-000000000008', 'confirmed', '{A11}', null),
+    ('a0000000-0000-4000-8000-000000000027', '33330000-0000-4000-8000-000000000008', 'confirmed', '{B1}',  null),
+    ('a0000000-0000-4000-8000-000000000028', '33330000-0000-4000-8000-000000000008', 'confirmed', '{B2}',  null),
+    ('a0000000-0000-4000-8000-000000000029', '33330000-0000-4000-8000-000000000008', 'confirmed', '{B3}',  null),
+    ('a0000000-0000-4000-8000-000000000035', '33330000-0000-4000-8000-000000000008', 'confirmed', '{B4}',  null),
+    ('a0000000-0000-4000-8000-000000000036', '33330000-0000-4000-8000-000000000008', 'confirmed', '{B5}',  null),
+    -- Jul 8 Wednesday (lighter week — a few vendors out):
+    ('a0000000-0000-4000-8000-000000000001', '33330000-0000-4000-8000-000000000009', 'confirmed', '{A1}',  null),
+    ('a0000000-0000-4000-8000-000000000005', '33330000-0000-4000-8000-000000000009', 'confirmed', '{A2}',  null),
+    ('a0000000-0000-4000-8000-000000000008', '33330000-0000-4000-8000-000000000009', 'confirmed', '{A3}',  null),
+    ('a0000000-0000-4000-8000-000000000009', '33330000-0000-4000-8000-000000000009', 'confirmed', '{A4}',  null),
+    ('a0000000-0000-4000-8000-000000000011', '33330000-0000-4000-8000-000000000009', 'confirmed', '{A5}',  null),
+    ('a0000000-0000-4000-8000-000000000014', '33330000-0000-4000-8000-000000000009', 'confirmed', '{A6}',  null),
+    ('a0000000-0000-4000-8000-000000000016', '33330000-0000-4000-8000-000000000009', 'confirmed', '{A8}',  null),
+    ('a0000000-0000-4000-8000-000000000024', '33330000-0000-4000-8000-000000000009', 'confirmed', '{A10}', null),
+    ('a0000000-0000-4000-8000-000000000026', '33330000-0000-4000-8000-000000000009', 'confirmed', '{A11}', null),
+    ('a0000000-0000-4000-8000-000000000028', '33330000-0000-4000-8000-000000000009', 'confirmed', '{B2}',  null),
+    ('a0000000-0000-4000-8000-000000000036', '33330000-0000-4000-8000-000000000009', 'confirmed', '{B5}',  null)
+  on conflict (vendor_id, market_date_id) do nothing;
+
   insert into fees (vendor_id, period, description, amount_cents, status, due_date) values
     ('a0000000-0000-4000-8000-000000000038', 'June 2026', 'Booth fee', 4000, 'paid', '2026-06-10'),
     ('a0000000-0000-4000-8000-000000000041', 'June 2026', 'Booth fee', 6000, 'due',  '2026-06-30');
@@ -711,6 +774,22 @@ begin
     ('a0000000-0000-4000-8000-000000000016', '33330000-0000-4000-8000-000000000013', 'confirmed', '{A7}', null),
     ('a0000000-0000-4000-8000-000000000020', '33330000-0000-4000-8000-000000000013', 'confirmed', '{B1}', null),
     ('a0000000-0000-4000-8000-000000000001', '33330000-0000-4000-8000-000000000013', 'confirmed', '{B6}', null);
+  -- Summer-only vendors: outdoor, seasonal, or not appropriate for an indoor
+  -- winter market. Empty market_ids (the default) means eligible for all markets;
+  -- a specific UUID restricts to just that market.
+  -- Summer market = Saturday Market (…0001); Winter market = Indoor Winter (…0003).
+  update vendors set market_ids = ARRAY['22220000-0000-4000-8000-000000000001'::uuid]
+  where id in (
+    'a0000000-0000-4000-8000-000000000003'::uuid,  -- Mary's Peak Flowers
+    'a0000000-0000-4000-8000-000000000007'::uuid,  -- Sunbow Orchard
+    'a0000000-0000-4000-8000-000000000013'::uuid,  -- Blue Mountain Berries
+    'a0000000-0000-4000-8000-000000000017'::uuid,  -- Greenwise Herbs & Starts
+    'a0000000-0000-4000-8000-000000000018'::uuid,  -- Yaquina Bay Seafood
+    'a0000000-0000-4000-8000-000000000033'::uuid,  -- Bramble & Bloom
+    'a0000000-0000-4000-8000-000000000034'::uuid,  -- Filbert Hollow Nursery
+    'a0000000-0000-4000-8000-000000000037'::uuid,  -- Honeycrisp Hill Orchard
+    'a0000000-0000-4000-8000-000000000039'::uuid   -- Riverside Cyclery
+  );
 end $seed$;
 
 -- Internal loader: not callable directly over the API.

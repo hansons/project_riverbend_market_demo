@@ -78,6 +78,7 @@ export interface Vendor {
   town: string | null;
   practices: string[];
   market_days: string[];
+  market_ids: string[];  // empty = all markets; one or more UUIDs = restricted
   image_url: string | null;
   logo_url: string | null;
   email: string | null;

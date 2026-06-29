@@ -52,7 +52,7 @@ export function DemoBar({ onAbout, onShortcuts }: { onAbout: () => void; onShort
 
         <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
           <span className="mr-1 hidden text-xs text-white/70 lg:inline">View as</span>
-          {PERSONAS.map((p) => {
+          {PERSONAS.filter((p) => p.key !== 'owner').map((p) => {
             const isActive = p.key === active.key;
             const disabled = !isSupabaseConfigured && p.key !== 'shopper';
             return (

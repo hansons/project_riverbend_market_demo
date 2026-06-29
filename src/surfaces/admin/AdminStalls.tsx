@@ -143,7 +143,14 @@ export function AdminStalls() {
         ? confirmed.filter((r) => r.stalls.length === 0)
         : confirmed;
   const scheduledIds = new Set(confirmed.map((r) => r.vendor_id));
-  const addable = allVendors.filter((v) => v.status === 'active' && !scheduledIds.has(v.id));
+  // Restrict "Add a vendor" to vendors eligible for the current market.
+  // Empty market_ids = eligible for all markets; specific UUIDs = restricted.
+  const addable = allVendors.filter(
+    (v) =>
+      v.status === 'active' &&
+      !scheduledIds.has(v.id) &&
+      (v.market_ids.length === 0 || !currentMarketId || v.market_ids.includes(currentMarketId)),
+  );
 
   const selectedRow = confirmed.find((r) => r.vendor_id === selectedVendorId) ?? null;
 
@@ -181,9 +188,14 @@ export function AdminStalls() {
     autoPairs.push({ stall: s.label, vendorId: r.vendor_id, name: r.vendors?.name ?? 'Vendor' });
   }
 
-  // Category coverage + balance recommendations: which categories the active
-  // vendor pool can offer, how many are scheduled today, and who fills the gaps.
-  const activeCats = [...new Set(allVendors.filter((v) => v.status === 'active').map((v) => v.category))].sort();
+  // Category coverage + balance recommendations: which categories the active,
+  // market-eligible vendor pool can offer, how many are scheduled today, and who fills the gaps.
+  const marketEligible = allVendors.filter(
+    (v) =>
+      v.status === 'active' &&
+      (v.market_ids.length === 0 || !currentMarketId || v.market_ids.includes(currentMarketId)),
+  );
+  const activeCats = [...new Set(marketEligible.map((v) => v.category))].sort();
   const schedByCat: Record<string, number> = {};
   for (const r of confirmed) {
     const c = r.vendors?.category ?? '—';

@@ -27,7 +27,7 @@ function formatNextDate(iso: string): string {
   });
 }
 
-const FALLBACK_HERO = 'https://images.unsplash.com/uxJ1Sb0nwYw?auto=format&fit=crop&w=900&q=80';
+const FALLBACK_HERO = 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=900&q=80';
 
 const WHY_LODESTONE = [
   { icon: '👥', title: 'Vendor Updates',  old: 'Texts, emails, spreadsheets',     next: 'Vendors self-update in real time' },

@@ -790,6 +790,17 @@ begin
     'a0000000-0000-4000-8000-000000000037'::uuid,  -- Honeycrisp Hill Orchard
     'a0000000-0000-4000-8000-000000000039'::uuid   -- Riverside Cyclery
   );
+
+  -- Vendor logos: square crops derived from each vendor's cover image.
+  update vendors
+  set logo_url = replace(image_url, 'w=900&q=70', 'w=100&h=100&q=80')
+  where image_url is not null;
+
+  -- Market branding: logo (nav) + hero banner for the Riverbend tenant.
+  update tenants set
+    logo_url  = 'https://images.unsplash.com/5ytFj8-Zn6Y?auto=format&fit=crop&w=100&h=100&q=80',
+    banner_url = 'https://images.unsplash.com/ZUWls_bDgAk?auto=format&fit=crop&w=1800&q=80'
+  where id = '11110000-0000-4000-8000-000000000001';
 end $seed$;
 
 -- Internal loader: not callable directly over the API.

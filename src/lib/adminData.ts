@@ -16,10 +16,14 @@ import type {
 // Admin reads/writes. RLS (is_admin) lets these see and touch every vendor's
 // rows — the same queries a vendor runs return only their own.
 
+function normalizeVendor(v: Vendor): Vendor {
+  return { ...v, practices: v.practices ?? [], market_days: v.market_days ?? [], market_ids: v.market_ids ?? [] };
+}
+
 // ── Vendors / applications ──
 export async function fetchAllVendors(): Promise<Vendor[]> {
   const { data } = await supabase.from('vendors').select('*').order('name');
-  return (data as Vendor[]) ?? [];
+  return ((data as Vendor[]) ?? []).map(normalizeVendor);
 }
 
 export async function setVendorStatus(id: string, status: VendorStatus): Promise<string | null> {

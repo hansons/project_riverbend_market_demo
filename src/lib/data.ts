@@ -15,6 +15,15 @@ import type {
 // so these work with the anon client (no login). When Supabase isn't connected
 // yet they return empty and the UI shows a setup notice.
 
+function normalizeVendor(v: Vendor): Vendor {
+  return {
+    ...v,
+    practices: v.practices ?? [],
+    market_days: v.market_days ?? [],
+    market_ids: v.market_ids ?? [],
+  };
+}
+
 export async function fetchMarkets(): Promise<Market[]> {
   if (!isSupabaseConfigured) return [];
   const { data } = await supabase.from('markets').select('*').order('sort');
@@ -124,7 +133,7 @@ export async function fetchVendors(): Promise<Vendor[]> {
     .eq('status', 'active')
     .order('featured', { ascending: false })
     .order('name');
-  return (data as Vendor[]) ?? [];
+  return ((data as Vendor[]) ?? []).map(normalizeVendor);
 }
 
 /** Vendors explicitly scheduled to be featured for the applicable week (latest week_of ≤ reference). */
@@ -140,13 +149,13 @@ export async function fetchFeaturedForWeek(reference: string): Promise<Vendor[]>
   const latest = rows[0].week_of;
   return rows
     .filter((r) => r.week_of === latest && r.vendors && r.vendors.status === 'active')
-    .map((r) => r.vendors as Vendor);
+    .map((r) => normalizeVendor(r.vendors as Vendor));
 }
 
 export async function fetchVendorBySlug(slug: string): Promise<Vendor | null> {
   if (!isSupabaseConfigured) return null;
   const { data } = await supabase.from('vendors').select('*').eq('slug', slug).maybeSingle();
-  return (data as Vendor) ?? null;
+  return data ? normalizeVendor(data as Vendor) : null;
 }
 
 export async function fetchVendorProducts(vendorId: string): Promise<VendorProduct[]> {

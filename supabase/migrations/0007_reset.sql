@@ -81,7 +81,7 @@ begin
      'Specialty & wild mushrooms',
      'Indoor-grown lion''s mane, oyster, and shiitake, plus foraged seasonal wild mushrooms. Grow kits available.',
      'Corvallis, OR', '{"Indoor-grown","Foraged"}', '{"Saturday"}',
-     'https://images.unsplash.com/photo-1518882570151-12af3cdb5cf3?auto=format&fit=crop&w=900&q=70',
+     'https://images.unsplash.com/photo-1621455799534-deab8a1c1d89?auto=format&fit=crop&w=900&q=70',
      'fungi@willamette.demo', 'active', true),
     ('a0000000-0000-4000-8000-000000000007', 'sunbow-orchard', 'Sunbow Orchard', 'Orchard & Fruit',
      'Tree fruit, berries & cider',

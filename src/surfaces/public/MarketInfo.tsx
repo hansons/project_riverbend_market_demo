@@ -3,7 +3,6 @@ import { useAsync } from '@/lib/useAsync';
 import { fetchMarkets, fetchFrontPageMarketDate, fetchAssignmentsForDate } from '@/lib/data';
 import { fetchMarketStalls, fetchMarketMap, DEFAULT_MAP_SETTINGS, DEFAULT_CENTER, type StallPos } from '@/lib/stalls';
 import { formatDate } from '@/lib/format';
-import { useTheme } from '@/theme/ThemeProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { SetupNotice } from '@/components/SetupNotice';
 import { MarketMap, type MapOccupant } from '@/components/MarketMap';
@@ -25,7 +24,6 @@ function todayISO(): string {
 
 export function MarketInfo() {
   const { data: markets, loading: marketsLoading } = useAsync(fetchMarkets, [], []);
-  const { tenant } = useTheme();
   const [view, setView] = useState<'grid' | 'satellite'>('grid');
 
   const { data: mapData, loading: mapLoading } = useAsync(

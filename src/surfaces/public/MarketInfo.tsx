@@ -24,7 +24,7 @@ function todayISO(): string {
 
 export function MarketInfo() {
   const { data: markets, loading: marketsLoading } = useAsync(fetchMarkets, [], []);
-  const [view, setView] = useState<'grid' | 'satellite'>('grid');
+  const [view, setView] = useState<'grid' | 'satellite'>('satellite');
 
   const { data: mapData, loading: mapLoading } = useAsync(
     async () => {

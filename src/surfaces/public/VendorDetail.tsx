@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   fetchVendorBySlug,
   fetchVendorProducts,
@@ -7,11 +8,13 @@ import {
   fetchAssignmentsForDate,
 } from '@/lib/data';
 import { fetchMarketDates } from '@/lib/vendorData';
+import { fetchMarketStalls, fetchMarketMap, DEFAULT_CENTER, type StallPos } from '@/lib/stalls';
 import { useAsync } from '@/lib/useAsync';
 import { navigate } from '@/lib/router';
 import { categoryEmoji, formatDate, formatPrice, isProductInSeason, thisSaturdayISO } from '@/lib/format';
 import { VendorImage } from './VendorImage';
 import { MarketMap } from '@/components/MarketMap';
+import { MarketGeoMap } from '@/components/MarketGeoMap';
 import type { Vendor } from '@/lib/types';
 
 function todayISO(): string {
@@ -24,9 +27,17 @@ type MapData = {
   date: string;
   market: string;
   occupied: Record<string, { name: string; slug?: string }>;
+  stallLayout: StallPos[];
+  center: [number, number];
+  zoom: number | null;
+  aspect: 'landscape' | 'portrait' | 'square';
 };
 
+const tabActive = 'bg-brand-primary px-3 py-1 font-semibold text-white';
+const tabIdle = 'px-3 py-1 text-brand-ink/75 hover:bg-brand-paper';
+
 export function VendorDetail({ slug }: { slug: string }) {
+  const [mapView, setMapView] = useState<'satellite' | 'grid'>('satellite');
   const { data: vendor, loading } = useAsync<Vendor | null>(
     () => fetchVendorBySlug(slug),
     [slug],
@@ -55,9 +66,23 @@ export function VendorDetail({ slug }: { slug: string }) {
         .sort((a, b) => a.d!.date.localeCompare(b.d!.date));
       const next = stops[0];
       if (!next) return null;
-      const assignments = await fetchAssignmentsForDate(next.market_date_id);
+      const marketId = next.d!.market_id;
+      const [assignments, stallLayout, mapSettings] = await Promise.all([
+        fetchAssignmentsForDate(next.market_date_id),
+        fetchMarketStalls(marketId),
+        fetchMarketMap(marketId),
+      ]);
       const occupied = Object.fromEntries(assignments.map((a) => [a.stall, { name: a.vendor, slug: a.slug }]));
-      return { stalls: next.stalls, date: next.d!.date, market: next.d!.markets?.name ?? 'Market', occupied };
+      return {
+        stalls: next.stalls,
+        date: next.d!.date,
+        market: next.d!.markets?.name ?? 'Market',
+        occupied,
+        stallLayout,
+        center: mapSettings.center ?? DEFAULT_CENTER,
+        zoom: mapSettings.zoom,
+        aspect: mapSettings.aspect,
+      };
     },
     [vendor?.id],
     null,
@@ -200,13 +225,36 @@ export function VendorDetail({ slug }: { slug: string }) {
 
       {mapData && (
         <div className="mt-8">
-          <h2 className="text-xl">Find {vendor.name} at the market</h2>
-          <p className="mt-1 text-sm text-brand-muted">
-            Stall{mapData.stalls.length > 1 ? 's' : ''} {mapData.stalls.join(', ')} · {mapData.market} ·{' '}
-            {formatDate(mapData.date)}
-          </p>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xl">Find {vendor.name} at the market</h2>
+              <p className="mt-1 text-sm text-brand-muted">
+                Stall{mapData.stalls.length > 1 ? 's' : ''} {mapData.stalls.join(', ')} · {mapData.market} ·{' '}
+                {formatDate(mapData.date)}
+              </p>
+            </div>
+            <div className="inline-flex overflow-hidden rounded-lg border border-brand-line text-xs">
+              <button onClick={() => setMapView('satellite')} className={mapView === 'satellite' ? tabActive : tabIdle}>
+                Satellite
+              </button>
+              <button onClick={() => setMapView('grid')} className={mapView === 'grid' ? tabActive : tabIdle}>
+                Grid
+              </button>
+            </div>
+          </div>
           <div className="mt-3">
-            <MarketMap occupied={mapData.occupied} highlight={mapData.stalls} highlightText={vendor.name} />
+            {mapView === 'satellite' ? (
+              <MarketGeoMap
+                stalls={mapData.stallLayout}
+                occupied={mapData.occupied}
+                highlight={mapData.stalls}
+                center={mapData.center}
+                zoom={mapData.zoom}
+                aspect={mapData.aspect}
+              />
+            ) : (
+              <MarketMap occupied={mapData.occupied} highlight={mapData.stalls} highlightText={vendor.name} />
+            )}
           </div>
         </div>
       )}

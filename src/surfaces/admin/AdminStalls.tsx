@@ -133,7 +133,9 @@ export function AdminStalls() {
   const dupCount = series.length - newSeries.length;
   const seriesCapped = series.length >= 104;
 
-  const confirmed = rows.filter((r) => r.status === 'confirmed');
+  const confirmed = rows
+    .filter((r) => r.status === 'confirmed')
+    .map((r) => ({ ...r, stalls: r.stalls ?? [] }));
   const unassignedCount = confirmed.filter((r) => r.stalls.length === 0).length;
   const assignedCount = confirmed.length - unassignedCount;
   const shownConfirmed =
@@ -145,11 +147,12 @@ export function AdminStalls() {
   const scheduledIds = new Set(confirmed.map((r) => r.vendor_id));
   // Restrict "Add a vendor" to vendors eligible for the current market.
   // Empty market_ids = eligible for all markets; specific UUIDs = restricted.
+  // Defensive: market_ids may be undefined if the migration hasn't been applied yet.
   const addable = allVendors.filter(
     (v) =>
       v.status === 'active' &&
       !scheduledIds.has(v.id) &&
-      (v.market_ids.length === 0 || !currentMarketId || v.market_ids.includes(currentMarketId)),
+      ((v.market_ids?.length ?? 0) === 0 || !currentMarketId || v.market_ids?.includes(currentMarketId)),
   );
 
   const selectedRow = confirmed.find((r) => r.vendor_id === selectedVendorId) ?? null;
@@ -352,7 +355,7 @@ export function AdminStalls() {
 
   async function exportSeason() {
     const all = await fetchAllSchedule();
-    const out = [CSV_HEADER, ...all.map((r) => [r.date, r.market, r.vendor, r.slug, r.stalls.join(' '), r.status])];
+    const out = [CSV_HEADER, ...all.map((r) => [r.date, r.market, r.vendor, r.slug, (r.stalls ?? []).join(' '), r.status])];
     downloadCSV('riverbend-stall-assignments.csv', toCSV(out));
   }
 

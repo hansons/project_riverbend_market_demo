@@ -27,6 +27,7 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
   const demoMarketId = demoMarket?.id ?? null;
   const [busy, setBusy] = useState<string | null>(null);
   const [mapView, setMapView] = useState<'satellite' | 'grid'>('satellite');
+  const [selectedStopIdx, setSelectedStopIdx] = useState(0);
 
   // Follow the owner's demo (active) market.
   const inDemo = (marketId: string) => !demoMarketId || marketId === demoMarketId;
@@ -39,11 +40,10 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
     .map((s) => ({ s, d: dates.find((x) => x.id === s.market_date_id) }))
     .filter((x) => x.d && x.d.date >= today && inDemo(x.d.market_id))
     .sort((a, b) => a.d!.date.localeCompare(b.d!.date));
-  const myNext = myStops[0];
+  const selectedStop = myStops[Math.min(selectedStopIdx, myStops.length - 1)] ?? myStops[0];
 
-  // Saved stall positions for the next stop's market, so the satellite view shows
-  // the real placement; the vendor's assigned stall(s) are highlighted.
-  const marketId = myNext?.d?.market_id ?? null;
+  // Saved stall positions for the selected stop's market.
+  const marketId = selectedStop?.d?.market_id ?? null;
   const { data: marketStalls, loading: stallsLoading } = useAsync(
     () => (marketId ? fetchMarketStalls(marketId) : Promise.resolve([])),
     [marketId],
@@ -89,15 +89,15 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
         )}
       </div>
 
-      {myNext && (
+      {selectedStop && (
         <div className="mt-4">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium text-brand-ink">
-              📍 Your spot · {myNext.d!.markets?.name ?? 'Market'} {formatDate(myNext.d!.date)}
-              {myNext.s.stalls.length > 0 && (
+              📍 Your spot · {selectedStop.d!.markets?.name ?? 'Market'} {formatDate(selectedStop.d!.date)}
+              {selectedStop.s.stalls.length > 0 && (
                 <span className="text-brand-muted">
                   {' '}
-                  — Stall{myNext.s.stalls.length > 1 ? 's' : ''} {myNext.s.stalls.join(', ')}
+                  — Stall{selectedStop.s.stalls.length > 1 ? 's' : ''} {selectedStop.s.stalls.join(', ')}
                 </span>
               )}
             </p>
@@ -130,7 +130,7 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
             ) : (
               <MarketGeoMap
                 stalls={marketStalls}
-                highlight={myNext.s.stalls}
+                highlight={selectedStop.s.stalls}
                 center={marketMap.center ?? DEFAULT_CENTER}
                 zoom={marketMap.zoom}
                 aspect={marketMap.aspect}
@@ -138,8 +138,8 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
             )
           ) : (
             <MarketMap
-              highlight={myNext.s.stalls}
-              highlightText={`You · ${myNext.d!.markets?.name ?? ''} ${formatDate(myNext.d!.date)}`}
+              highlight={selectedStop.s.stalls}
+              highlightText={`You · ${selectedStop.d!.markets?.name ?? ''} ${formatDate(selectedStop.d!.date)}`}
             />
           )}
         </div>
@@ -155,8 +155,19 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
             const row = byDate.get(d.id);
             const status = (row?.status ?? 'none') as ScheduleStatus | 'none';
             const pill = STATUS_PILL[status];
+            const stopIdx = myStops.findIndex((x) => x.d?.id === d.id);
+            const hasStall = stopIdx !== -1;
+            const isSelected = hasStall && stopIdx === Math.min(selectedStopIdx, myStops.length - 1);
             return (
-              <li key={d.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <li
+                key={d.id}
+                className={[
+                  'flex flex-wrap items-center justify-between gap-3 py-3',
+                  hasStall ? 'cursor-pointer rounded-lg px-2 -mx-2 transition hover:bg-brand-paper' : '',
+                  isSelected ? 'bg-brand-primary/5' : '',
+                ].join(' ')}
+                onClick={() => { if (hasStall) setSelectedStopIdx(stopIdx); }}
+              >
                 <div>
                   <p className="font-medium text-brand-ink">
                     {d.markets?.name ?? 'Market'} · {formatDate(d.date)}
@@ -164,8 +175,9 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
                   <div className="mt-0.5 flex items-center gap-2 text-xs">
                     <span className={`rounded-full px-2 py-0.5 font-semibold ${pill.className}`}>{pill.label}</span>
                     {row?.status === 'confirmed' && row.stalls.length > 0 && (
-                      <span className="text-brand-muted">
+                      <span className={isSelected ? 'font-semibold text-brand-primary-dark' : 'text-brand-muted'}>
                         Stall{row.stalls.length > 1 ? 's' : ''} {row.stalls.join(', ')}
+                        {isSelected && ' · showing on map'}
                       </span>
                     )}
                     {d.label && <span className="text-brand-accent">{d.label}</span>}

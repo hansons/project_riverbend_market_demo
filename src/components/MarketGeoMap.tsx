@@ -75,6 +75,9 @@ export function MarketGeoMap({
     }
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+    // Container may not have its final dimensions yet when rendered conditionally;
+    // invalidate on the next frame so Leaflet measures the real size.
+    requestAnimationFrame(() => map.invalidateSize());
     return () => {
       map.remove();
       mapRef.current = null;

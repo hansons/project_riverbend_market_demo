@@ -75,6 +75,17 @@ export async function uploadMarketAsset(
   return { url: supabase.storage.from('vendor-photos').getPublicUrl(path).data.publicUrl };
 }
 
+/** Upload a floor plan image (PNG/JPG/WebP) → WebP in the shared bucket; returns public URL.
+ *  Floor plans are kept at full resolution (up to 3000px) so stall pixel coordinates remain accurate. */
+export async function uploadFloorPlan(file: File): Promise<{ url: string } | { error: string }> {
+  if (!isSupabaseConfigured) return { error: 'Supabase not configured' };
+  const blob = await toWebp(file, 3000, 0.92);
+  const path = `market/floor-plan-${Date.now()}.webp`;
+  const up = await supabase.storage.from('vendor-photos').upload(path, blob, { contentType: 'image/webp', upsert: true });
+  if (up.error) return { error: up.error.message };
+  return { url: supabase.storage.from('vendor-photos').getPublicUrl(path).data.publicUrl };
+}
+
 /** Set the active market's logo and/or favicon URL (admin+; enforced by RLS). */
 export async function updateMarketBranding(patch: {
   logo_url?: string | null;

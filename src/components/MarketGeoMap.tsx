@@ -43,6 +43,7 @@ export function MarketGeoMap({
   zoom = null,
   colorBy = 'status',
   aspect = 'landscape',
+  floorPlanUrl = null,
 }: {
   occupied?: Record<string, MapOccupant>;
   highlight?: string | string[] | null;
@@ -52,34 +53,55 @@ export function MarketGeoMap({
   zoom?: number | null;
   colorBy?: 'status' | 'category';
   aspect?: MapAspect;
+  floorPlanUrl?: string | null;
 }) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
-  const state = useRef({ occupied, highlight, onCellClick, stalls, center, zoom, colorBy });
-  state.current = { occupied, highlight, onCellClick, stalls, center, zoom, colorBy };
+  const state = useRef({ occupied, highlight, onCellClick, stalls, center, zoom, colorBy, floorPlanUrl });
+  state.current = { occupied, highlight, onCellClick, stalls, center, zoom, colorBy, floorPlanUrl };
 
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
-    const positions = state.current.stalls?.length ? state.current.stalls : generateStallGrid(state.current.center);
-    const map = L.map(elRef.current, { scrollWheelZoom: false, maxZoom: 22, zoomSnap: 0.5, zoomDelta: 0.5 });
-    // Imagery is native to ~z19; allow zooming to 22 (Leaflet upscales the tiles)
-    // so the stalls can grow to fill the view when you zoom right in. Half-step
-    // zoom (zoomSnap/zoomDelta) lets you stop before the imagery turns blurry.
-    L.tileLayer(ESRI, { maxZoom: 22, maxNativeZoom: 19, attribution: ATTRIB }).addTo(map);
-    // Owner-framed view (center + zoom) when set; otherwise auto-fit to the stalls.
-    if (state.current.zoom != null) {
-      map.setView(state.current.center, state.current.zoom);
+    const el = elRef.current;
+
+    const initMap = (fpW?: number, fpH?: number) => {
+      const isFloorPlan = Boolean(state.current.floorPlanUrl && fpW && fpH);
+      const positions = state.current.stalls?.length
+        ? state.current.stalls
+        : isFloorPlan ? [] : generateStallGrid(state.current.center);
+
+      let map: L.Map;
+      if (isFloorPlan && state.current.floorPlanUrl && fpW && fpH) {
+        map = L.map(el, { crs: L.CRS.Simple, minZoom: -5, maxZoom: 5, scrollWheelZoom: false });
+        const bounds: L.LatLngBoundsExpression = [[0, 0], [fpH, fpW]];
+        L.imageOverlay(state.current.floorPlanUrl, bounds).addTo(map);
+        map.fitBounds(bounds, { padding: [20, 20] });
+      } else {
+        map = L.map(el, { scrollWheelZoom: false, maxZoom: 22, zoomSnap: 0.5, zoomDelta: 0.5 });
+        L.tileLayer(ESRI, { maxZoom: 22, maxNativeZoom: 19, attribution: ATTRIB }).addTo(map);
+        if (state.current.zoom != null) {
+          map.setView(state.current.center, state.current.zoom);
+        } else if (positions.length) {
+          map.fitBounds(L.latLngBounds(positions.map((p) => [p.lat, p.lng] as [number, number])), { padding: [40, 40], maxZoom: 20 });
+        }
+      }
+      layerRef.current = L.layerGroup().addTo(map);
+      mapRef.current = map;
+      requestAnimationFrame(() => map.invalidateSize());
+    };
+
+    if (state.current.floorPlanUrl) {
+      const img = new window.Image();
+      img.onload = () => initMap(img.naturalWidth, img.naturalHeight);
+      img.onerror = () => initMap();
+      img.src = state.current.floorPlanUrl;
     } else {
-      map.fitBounds(L.latLngBounds(positions.map((p) => [p.lat, p.lng] as [number, number])), { padding: [40, 40], maxZoom: 20 });
+      initMap();
     }
-    layerRef.current = L.layerGroup().addTo(map);
-    mapRef.current = map;
-    // Container may not have its final dimensions yet when rendered conditionally;
-    // invalidate on the next frame so Leaflet measures the real size.
-    requestAnimationFrame(() => map.invalidateSize());
+
     return () => {
-      map.remove();
+      mapRef.current?.remove();
       mapRef.current = null;
       layerRef.current = null;
     };
@@ -128,7 +150,7 @@ export function MarketGeoMap({
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [occupied, highlight, stalls, center, colorBy]);
+  }, [occupied, highlight, stalls, center, colorBy, floorPlanUrl]);
 
   const byCategory = colorBy === 'category';
   const cats = byCategory && stalls ? [...new Set(stalls.map((s) => (s.category ?? '').trim()).filter(Boolean))].sort() : [];

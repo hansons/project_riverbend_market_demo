@@ -134,6 +134,7 @@ export function VendorSchedule({ vendor }: { vendor: Vendor }) {
                 center={marketMap.center ?? DEFAULT_CENTER}
                 zoom={marketMap.zoom}
                 aspect={marketMap.aspect}
+                floorPlanUrl={marketMap.floor_plan_url}
               />
             )
           ) : (

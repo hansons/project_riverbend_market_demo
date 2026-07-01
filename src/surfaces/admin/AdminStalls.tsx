@@ -753,6 +753,7 @@ export function AdminStalls() {
               marketId={currentMarketId}
               initialStalls={marketStalls}
               center={center}
+              floorPlanUrl={marketMap.floor_plan_url}
               onSaved={() => {
                 reloadStalls();
                 setEditingLayout(false);
@@ -770,6 +771,7 @@ export function AdminStalls() {
               zoom={marketMap.zoom}
               colorBy={colorBy}
               aspect={aspect}
+              floorPlanUrl={marketMap.floor_plan_url}
             />
           )}
         </div>

@@ -31,6 +31,7 @@ type MapData = {
   center: [number, number];
   zoom: number | null;
   aspect: 'landscape' | 'portrait' | 'square';
+  floorPlanUrl: string | null;
 };
 
 const tabActive = 'bg-brand-primary px-3 py-1 font-semibold text-white';
@@ -82,6 +83,7 @@ export function VendorDetail({ slug }: { slug: string }) {
         center: mapSettings.center ?? DEFAULT_CENTER,
         zoom: mapSettings.zoom,
         aspect: mapSettings.aspect,
+        floorPlanUrl: mapSettings.floor_plan_url,
       };
     },
     [vendor?.id],
@@ -251,6 +253,7 @@ export function VendorDetail({ slug }: { slug: string }) {
                 center={mapData.center}
                 zoom={mapData.zoom}
                 aspect={mapData.aspect}
+                floorPlanUrl={mapData.floorPlanUrl}
               />
             ) : (
               <MarketMap occupied={mapData.occupied} highlight={mapData.stalls} highlightText={vendor.name} />

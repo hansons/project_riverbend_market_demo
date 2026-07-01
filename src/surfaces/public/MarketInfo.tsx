@@ -43,6 +43,7 @@ export function MarketInfo() {
         center: mapSettings.center ?? DEFAULT_CENTER,
         zoom: mapSettings.zoom,
         aspect: mapSettings.aspect,
+        floorPlanUrl: mapSettings.floor_plan_url,
       };
     },
     [],
@@ -53,6 +54,7 @@ export function MarketInfo() {
       center: DEFAULT_CENTER,
       zoom: DEFAULT_MAP_SETTINGS.zoom,
       aspect: DEFAULT_MAP_SETTINGS.aspect,
+      floorPlanUrl: null as string | null,
     },
   );
 
@@ -94,6 +96,7 @@ export function MarketInfo() {
             center={mapData.center}
             zoom={mapData.zoom}
             aspect={mapData.aspect}
+            floorPlanUrl={mapData.floorPlanUrl}
           />
         ) : (
           <MarketMap stalls={gridStalls} occupied={mapData.occupied} colorBy="category" />

@@ -43,6 +43,7 @@ export function VisitPanel() {
         center: mapSettings.center,
         zoom: mapSettings.zoom,
         aspect: mapSettings.aspect,
+        floorPlanUrl: mapSettings.floor_plan_url,
       };
     },
     [],
@@ -54,6 +55,7 @@ export function VisitPanel() {
       center: DEFAULT_MAP_SETTINGS.center,
       zoom: DEFAULT_MAP_SETTINGS.zoom,
       aspect: DEFAULT_MAP_SETTINGS.aspect,
+      floorPlanUrl: null as string | null,
     },
   );
   const [view, setView] = useState<'grid' | 'satellite'>('satellite');
@@ -114,6 +116,7 @@ export function VisitPanel() {
           center={data.center ?? DEFAULT_CENTER}
           zoom={data.zoom}
           aspect={data.aspect}
+          floorPlanUrl={data.floorPlanUrl}
         />
       ) : (
         <MarketMap

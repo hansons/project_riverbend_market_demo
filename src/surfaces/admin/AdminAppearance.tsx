@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react';
 import { ThemePicker } from '@/components/ThemePicker';
 import { useTheme } from '@/theme/ThemeProvider';
-import { uploadMarketAsset, updateMarketBranding } from '@/lib/tenant';
+import { uploadMarketAsset, updateMarketBranding, uploadFloorPlan } from '@/lib/tenant';
+import { fetchAllMarketMaps, saveMarketFloorPlan } from '@/lib/stalls';
+import { fetchMarkets } from '@/lib/data';
+import { useAsync } from '@/lib/useAsync';
 
 type AssetKind = 'logo' | 'favicon' | 'banner';
 
@@ -56,6 +59,104 @@ export function AdminAppearance() {
       </div>
 
       <ThemePicker />
+
+      <FloorPlanManager />
+    </div>
+  );
+}
+
+function FloorPlanManager() {
+  const { data: markets } = useAsync(fetchMarkets, [], []);
+  const { data: allMaps, reload } = useAsync(fetchAllMarketMaps, [], {});
+
+  return (
+    <div className="card p-6">
+      <h3 className="text-lg">Market floor plans</h3>
+      <p className="mt-1 text-sm text-brand-muted">
+        Upload a floor plan image for indoor or non-satellite venues. When set, the stall map switches from
+        satellite tiles to the floor plan — stall positions are then placed on pixel coordinates.
+      </p>
+      <div className="mt-5 space-y-4">
+        {markets.map((m) => {
+          const currentUrl = allMaps[m.id]?.floor_plan_url ?? null;
+          return (
+            <FloorPlanUploader
+              key={m.id}
+              marketId={m.id}
+              marketName={m.name}
+              currentUrl={currentUrl}
+              onChanged={reload}
+            />
+          );
+        })}
+        {!markets.length && <p className="text-sm text-brand-muted">No markets found.</p>}
+      </div>
+    </div>
+  );
+}
+
+function FloorPlanUploader({
+  marketId,
+  marketName,
+  currentUrl,
+  onChanged,
+}: {
+  marketId: string;
+  marketName: string;
+  currentUrl: string | null;
+  onChanged: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (fileRef.current) fileRef.current.value = '';
+    if (!file) return;
+    setBusy(true);
+    setErr(null);
+    const res = await uploadFloorPlan(file);
+    if ('error' in res) { setErr(res.error); setBusy(false); return; }
+    const uerr = await saveMarketFloorPlan(marketId, res.url);
+    setBusy(false);
+    if (uerr) setErr(uerr);
+    else onChanged();
+  }
+
+  async function remove() {
+    setBusy(true);
+    setErr(null);
+    const uerr = await saveMarketFloorPlan(marketId, null);
+    setBusy(false);
+    if (uerr) setErr(uerr);
+    else onChanged();
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-4 rounded-xl border border-brand-line bg-brand-paper p-4">
+      <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-lg border border-brand-line bg-brand-card">
+        {currentUrl
+          ? <img src={currentUrl} alt="" className="h-full w-full object-cover" />
+          : <span className="text-2xl">🗺️</span>
+        }
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-brand-ink">{marketName}</p>
+        <p className="text-xs text-brand-muted">{currentUrl ? 'Floor plan set — stall map uses image overlay' : 'No floor plan — uses satellite tiles'}</p>
+        {err && <p className="mt-0.5 text-xs text-status-alert">{err}</p>}
+      </div>
+      <div className="flex items-center gap-2">
+        <button className="btn-outline px-3 py-1.5 text-sm" disabled={busy} onClick={() => fileRef.current?.click()}>
+          {busy ? 'Uploading…' : currentUrl ? 'Replace' : 'Upload'}
+        </button>
+        {currentUrl && (
+          <button className="text-xs font-semibold text-status-alert hover:underline" disabled={busy} onClick={remove}>
+            Remove
+          </button>
+        )}
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
+      </div>
     </div>
   );
 }

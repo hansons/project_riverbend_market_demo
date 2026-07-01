@@ -26,12 +26,14 @@ export function StallLayoutEditor({
   marketId,
   initialStalls,
   center = DEFAULT_CENTER,
+  floorPlanUrl = null,
   onSaved,
   onCancel,
 }: {
   marketId: string;
   initialStalls: StallPos[];
   center?: [number, number];
+  floorPlanUrl?: string | null;
   onSaved: () => void;
   onCancel: () => void;
 }) {
@@ -44,18 +46,54 @@ export function StallLayoutEditor({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<'ok' | string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const floorPlanRef = useRef(floorPlanUrl);
 
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
-    const start = initialStalls.length ? initialStalls : generateStallGrid(center);
-    posRef.current = Object.fromEntries(start.map((s) => [s.label, [s.lat, s.lng] as [number, number]]));
-    const map = L.map(elRef.current, { scrollWheelZoom: false, zoomSnap: 0.5, zoomDelta: 0.5 });
-    L.tileLayer(ESRI, { maxZoom: 20, attribution: ATTRIB }).addTo(map);
-    map.fitBounds(L.latLngBounds(start.map((s) => [s.lat, s.lng] as [number, number])), { padding: [40, 40], maxZoom: 20 });
-    mapRef.current = map;
-    setItems(start.map((s) => ({ label: s.label, disabled: !!s.disabled, category: s.category ?? undefined })));
+    const el = elRef.current;
+    const fp = floorPlanRef.current;
+
+    const initMap = (fpW?: number, fpH?: number) => {
+      const isFloorPlan = Boolean(fp && fpW && fpH);
+      // Floor plan: start with no stalls if none placed yet (pixel coords from geo default would be wrong).
+      const start = initialStalls.length
+        ? initialStalls
+        : isFloorPlan ? [] : generateStallGrid(center);
+      posRef.current = Object.fromEntries(start.map((s) => [s.label, [s.lat, s.lng] as [number, number]]));
+
+      let map: L.Map;
+      if (isFloorPlan && fp && fpW && fpH) {
+        map = L.map(el, { crs: L.CRS.Simple, minZoom: -5, maxZoom: 5, scrollWheelZoom: false, zoomSnap: 0.5 });
+        const bounds: L.LatLngBoundsExpression = [[0, 0], [fpH, fpW]];
+        L.imageOverlay(fp, bounds).addTo(map);
+        if (start.length) {
+          map.fitBounds(L.latLngBounds(start.map((s) => [s.lat, s.lng] as [number, number])), { padding: [40, 40] });
+        } else {
+          map.fitBounds(bounds, { padding: [20, 20] });
+        }
+      } else {
+        map = L.map(el, { scrollWheelZoom: false, zoomSnap: 0.5, zoomDelta: 0.5 });
+        L.tileLayer(ESRI, { maxZoom: 20, attribution: ATTRIB }).addTo(map);
+        if (start.length) {
+          map.fitBounds(L.latLngBounds(start.map((s) => [s.lat, s.lng] as [number, number])), { padding: [40, 40], maxZoom: 20 });
+        }
+      }
+      mapRef.current = map;
+      requestAnimationFrame(() => map.invalidateSize());
+      setItems(start.map((s) => ({ label: s.label, disabled: !!s.disabled, category: s.category ?? undefined })));
+    };
+
+    if (fp) {
+      const img = new window.Image();
+      img.onload = () => initMap(img.naturalWidth, img.naturalHeight);
+      img.onerror = () => initMap();
+      img.src = fp;
+    } else {
+      initMap();
+    }
+
     return () => {
-      map.remove();
+      mapRef.current?.remove();
       mapRef.current = null;
       markersRef.current = {};
     };

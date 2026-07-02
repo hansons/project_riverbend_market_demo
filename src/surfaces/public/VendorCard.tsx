@@ -4,8 +4,8 @@ import { useVisitList } from '@/lib/visitList';
 import { VendorImage } from './VendorImage';
 import type { Vendor } from '@/lib/types';
 
-// Tapping the card toggles the vendor into the shopper's visit list (added state
-// shows a ring + badge); the "View" link still opens the vendor's page.
+// Tapping the card opens the vendor's page. The "+ Visit" badge toggles the
+// vendor into the shopper's visit list without navigating away.
 export function VendorCard({ vendor }: { vendor: Vendor }) {
   const visit = useVisitList();
   const added = visit.has(vendor.slug);
@@ -13,15 +13,13 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
     <div
       role="button"
       tabIndex={0}
-      onClick={() => visit.toggle(vendor.slug)}
+      onClick={() => navigate(`/vendor/${vendor.slug}`)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          visit.toggle(vendor.slug);
+          navigate(`/vendor/${vendor.slug}`);
         }
       }}
-      aria-pressed={added}
-      title={added ? `Remove ${vendor.name} from your visit list` : `Add ${vendor.name} to your visit list`}
       className={`card group relative cursor-pointer overflow-hidden text-left transition hover:shadow-lift ${
         added ? 'ring-2 ring-brand-primary' : ''
       }`}
@@ -36,13 +34,20 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
             Featured
           </span>
         )}
-        <span
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            visit.toggle(vendor.slug);
+          }}
+          aria-pressed={added}
+          title={added ? `Remove ${vendor.name} from your visit list` : `Add ${vendor.name} to your visit list`}
           className={`absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold shadow transition ${
-            added ? 'bg-brand-primary text-white' : 'bg-white/85 text-brand-ink/80 opacity-0 group-hover:opacity-100'
+            added ? 'bg-brand-primary text-white' : 'bg-white/85 text-brand-ink/80 hover:bg-white'
           }`}
         >
           {added ? '✓ On list' : '+ Visit'}
-        </span>
+        </button>
         {vendor.logo_url && (
           <div className="absolute bottom-2 left-2 h-10 w-10 overflow-hidden rounded-lg border border-white/80 bg-white shadow">
             <img src={vendor.logo_url} alt="" className="h-full w-full object-contain p-0.5" />

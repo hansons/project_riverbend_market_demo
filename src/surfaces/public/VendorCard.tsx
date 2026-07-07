@@ -24,7 +24,7 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
         added ? 'ring-2 ring-brand-primary' : ''
       }`}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-brand-paper">
+      <div className="relative aspect-[16/9] overflow-hidden bg-brand-paper">
         <VendorImage
           vendor={vendor}
           className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
@@ -54,15 +54,15 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
           </div>
         )}
       </div>
-      <div className="p-4">
+      <div className="p-3">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-base font-semibold leading-tight text-brand-primary-dark">{vendor.name}</h3>
-          <span className="chip shrink-0">
+          <h3 className="text-sm font-semibold leading-tight text-brand-primary-dark">{vendor.name}</h3>
+          <span className="chip shrink-0 text-[11px]">
             {categoryEmoji(vendor.category)} {vendor.category}
           </span>
         </div>
-        {vendor.tagline && <p className="mt-1 text-sm text-brand-muted">{vendor.tagline}</p>}
-        <div className="mt-3 flex items-center justify-between gap-2 text-xs text-brand-muted">
+        {vendor.tagline && <p className="mt-0.5 text-xs text-brand-muted line-clamp-1">{vendor.tagline}</p>}
+        <div className="mt-2 flex items-center justify-between gap-2 text-xs text-brand-muted">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             {vendor.town && <span>📍 {vendor.town}</span>}
             {vendor.market_days.length > 0 && <span>· {vendor.market_days.join(' & ')}</span>}

@@ -61,9 +61,9 @@ export function VendorBrowse() {
       {/* Results */}
       <div className="mt-8">
         {loading ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-72 animate-pulse rounded-2xl bg-brand-card" />
+              <div key={i} className="h-48 animate-pulse rounded-2xl bg-brand-card" />
             ))}
           </div>
         ) : !vendors.length ? (
@@ -73,7 +73,7 @@ export function VendorBrowse() {
             <SetupNotice />
           )
         ) : filtered.length ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((v) => (
               <VendorCard key={v.id} vendor={v} />
             ))}

@@ -92,7 +92,6 @@ export function MarketInfo() {
         ) : view === 'satellite' ? (
           <MarketGeoMap
             stalls={mapData.stalls}
-            highlight={Object.keys(mapData.occupied)}
             center={mapData.center}
             zoom={mapData.zoom}
             aspect={mapData.aspect}

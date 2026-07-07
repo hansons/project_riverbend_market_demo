@@ -6,6 +6,7 @@ import {
   pickCurrentOffering,
   fetchVendorConfirmed,
   fetchAssignmentsForDate,
+  fetchActiveMarket,
 } from '@/lib/data';
 import { fetchMarketDates } from '@/lib/vendorData';
 import { fetchMarketStalls, fetchMarketMap, DEFAULT_CENTER, type StallPos } from '@/lib/stalls';
@@ -58,12 +59,13 @@ export function VendorDetail({ slug }: { slug: string }) {
   const { data: mapData } = useAsync<MapData | null>(
     async () => {
       if (!vendor) return null;
-      const [confirmed, dates] = await Promise.all([fetchVendorConfirmed(vendor.id), fetchMarketDates()]);
+      const [confirmed, dates, activeMarket] = await Promise.all([fetchVendorConfirmed(vendor.id), fetchMarketDates(), fetchActiveMarket()]);
       const today = todayISO();
+      const activeMarketId = activeMarket?.id ?? null;
       const stops = confirmed
         .filter((c) => c.stalls.some((st) => /^[A-D]\d+$/.test(st)))
         .map((c) => ({ ...c, d: dates.find((x) => x.id === c.market_date_id) }))
-        .filter((x) => x.d && x.d.date >= today)
+        .filter((x) => x.d && x.d.date >= today && (!activeMarketId || x.d.market_id === activeMarketId))
         .sort((a, b) => a.d!.date.localeCompare(b.d!.date));
       const next = stops[0];
       if (!next) return null;
